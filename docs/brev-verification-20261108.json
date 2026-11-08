@@ -1,0 +1,59 @@
+{
+  "schema": "rescuemesh.provider-verification.v1",
+  "checkedAt": "2026-11-08T11:36:58Z",
+  "architecture": {
+    "ecswInference": "Nemotron 4B on the physical hub laptop",
+    "supervisorApplication": "Separate desktop, authenticated Cloudflare HTTPS",
+    "supervisorInference": "Nemotron 30B on Brev GPU",
+    "database": "Authenticated local MongoDB Community"
+  },
+  "gpu": {
+    "provider": "Brev / MassedCompute",
+    "name": "NVIDIA RTX A6000",
+    "memoryMiB": 49140,
+    "loadedModelVramBytes": 24217544293,
+    "driver": "580.126.09"
+  },
+  "model": {
+    "name": "nemotron-3-nano:30b",
+    "digest": "7487f38ecf2402d4080a074b98e9db8258f9701660625822b7b77747db64f0c9",
+    "ollamaVersion": "0.40.15",
+    "downloadedWeights": true,
+    "transport": "Private SSH to remote loopback; Windows loopback forwarding verified",
+    "publicInferencePortOpened": false
+  },
+  "applicationChecks": {
+    "nativeTools": ["lookup_resources", "propose_allocation"],
+    "syntheticPolicyValidPlan": true,
+    "coldCheckMs": 117858,
+    "warmCheckMs": 832,
+    "liveApplicationPlanMs": 1225,
+    "postFixAddisonNativeCheckMs": 1131,
+    "postFixAddisonSupplier": "plano",
+    "requestingHubExcludedFromSupplierChoices": true,
+    "postFixLiveApplicationPlanMs": 1408,
+    "postFixLiveSuccessfulToolCalls": 8,
+    "allRequestsClaimedModelGenerated": false,
+    "invalidOutputBehavior": "Explicit deterministic resource policy; no other LLM",
+    "authenticatedStateStatus": 200,
+    "anonymousStateStatus": 401,
+    "mongoConnected": true,
+    "realEmergencyServicesContacted": false
+  },
+  "boundedOwnership": {
+    "guardRunningOnDesktop": true,
+    "separateCleanupEnabled": true,
+    "cleanupNextRunUtc": "2026-11-10T05:00:00Z",
+    "creditCapUsd": 30,
+    "hourlyRateUsd": 0.68,
+    "conservativePriorSpendUsd": 1,
+    "estimatedMaximumProjectUsd": 29.4032,
+    "cleanupReserveUsd": 0.2,
+    "paymentMethodAdded": false,
+    "autoRechargeAdded": false,
+    "failedInstancesDeletedAndAbsenceVerified": 2
+  },
+  "credentialsIncluded": false,
+  "rawReportContentIncluded": false,
+  "notice": "Point-in-time observations; individual timings are not latency or availability guarantees. Dispatch remains an exercise."
+}

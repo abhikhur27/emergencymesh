@@ -1,5 +1,26 @@
 # RescueMesh runtime receipt
 
+## Current deployment verified November 8, 11:29 UTC
+
+| Component | Actual host and provider |
+| --- | --- |
+| Physical ECSW hub and native tools | ABHIKHUR laptop, local downloaded Nemotron 4B |
+| Supervisor application, data and HTTPS connector | ABHIONEMILLION desktop |
+| Supervisor inference | Brev MassedCompute A6000, downloaded Nemotron 30B over private SSH |
+| User/session/device metadata | Authenticated MongoDB Community on desktop loopback, reached privately |
+
+The plain-VM retry is RUNNING. Actual SSH and Windows loopback forwarding passed. The remote A6000 reports 49,140 MiB VRAM; 24,217,544,293 model bytes were loaded in VRAM. Official Ollama is pinned to 0.40.15. The 30B model digest is `7487f38ecf2402d4080a074b98e9db8258f9701660625822b7b77747db64f0c9`.
+
+The actual 30B model called `lookup_resources` followed by `propose_allocation` and produced a policy-valid plan. The cold check took 117.858 seconds, the warm check 0.832 seconds, and a subsequent live application plan 1.225 seconds. These are individual observations, not latency guarantees. The live authenticated supervisor and browser identify Brev, Nemotron 30B and private SSH. Mongo is connected. Anonymous state is denied (401), authenticated state succeeds (200), and real dispatch is disabled. An invalid subsequent model response used the explicit catalog-policy fallback; not every request is claimed to use a model proposal.
+
+At 11:35 UTC a validated planner update constrained supplier choices to other known towns with enough stock and clarified that the source hub is requesting help. This fixes the observed Addison self-supply proposal while retaining strict software checks. Two regressions failed before the change and passed after it; the supervisor suite now has 27 tests. A post-deployment actual Brev check with Addison as requester and an intentionally contaminated self-entry queried the filtered catalog and selected eligible Plano in 1.131 seconds. Live state at 11:36:58 UTC retained Brev 30B, eight successful tool calls, no model error, a 1.408-second latest plan and connected MongoDB. See the [sanitized provider receipt](brev-verification-20261108.json).
+
+Both failed environments were deleted and their absence verified. The approved retry omits unnecessary Jupyter and exposes no public inference HTTP service. The exact-instance desktop guard is running with its owned SSH child. Independent cleanup is enabled and Ready for **2026-11-10T05:00:00Z**, Monday November 9 at 11 PM Central, with its correct working directory and required files. The $0.68/hour total rate, conservative $1 prior spend and $0.20 reserve keep the estimated project spend through the deadline at $29.4032 within the $30 cap. No payment method or auto recharge was added. The temporary organization-only key expires at the end of November 10; issuer revocation is distinct from local logout.
+
+Both confirmed physical boards now run rescuemesh-oled-v3, with all four write hashes verified for each board. The companion's role-specific BLE advertisement was observed; the hub has BLE disabled. After reconnecting the hub, fresh requests authenticated using the newly enrolled independent phone profile and reached both local Nemotron and the supervisor. Requests without GPS or a recognized landmark correctly await location review. Original reports, credentials and region identity were retained. Physical display appearance and phone-side receipt observation remain separate acceptance evidence.
+
+The following dated preparation and earlier desktop-model measurements are retained for history; this current section supersedes their pending-provider observations.
+
 ## Update at 10:47 UTC, November 8
 
 The owner-approved temporary RescueMesh-only Read & Write API key is now installed privately on ABHIONEMILLION and authenticated by the pinned CLI. It expires at the end of November 10; no credential value is included here. The failed Hyperstack environment was deleted and authenticated inventory confirmed its absence at 10:36 UTC. This supersedes the pending-login observations below.

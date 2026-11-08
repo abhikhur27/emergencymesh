@@ -1,4 +1,6 @@
-# Brev provider preparation
+# Verified Brev provider setup
+
+The supervisor is using the actual Brev 30B model as of November 8, 2026, 11:27 UTC. Private SSH, native model tools, GPU memory, matching model digest, authenticated application state and desktop cleanup tasks passed. See [the sanitized verification receipt](../docs/brev-verification-20261108.json) and [runtime history](../docs/runtime-setup.md).
 
 The supervisor application stays on ABHIONEMILLION behind its existing authenticated Cloudflare route. Only supervisor inference moves to the approved Brev GPU. Laptop ECSW inference stays on its local 4B model. The target is downloaded `nemotron-3-nano:30b` weights on the48 GB GPU, accessed only through desktop loopback 11435 over private SSH to remote loopback 11434.
 
@@ -18,7 +20,7 @@ The official docs describe issuer-side revocation through Console â†’ API Keys â
 
 ## Compute and budget
 
-The first approved Hyperstack A6000 request failed provisioning and was deleted, with authenticated absence verified. The approved replacement is a MassedCompute A6000 with 48 GB VRAM, 64 GB system memory and 256 GB storage at $0.68/hour total, under a $30 credit cap. It was created November 8 at 10:40:23 UTC; its exact ID remains in the private plan. At 10:55 UTC it was still building without usable SSH or verified model inference. No payment method or auto recharge was added.
+The first approved Hyperstack A6000 request failed provisioning. The first MassedCompute replacement failed its build after 30 minutes. Both were deleted, with authenticated absence verified. One bounded retry of the same approved A6000 offering, without Jupyter, was created November 8 at 11:13:50 UTC and reached RUNNING. It provides 48 GB VRAM, 64 GB system memory and 256 GB storage at $0.68/hour total, under the same $30 cap. The plan includes a conservative $1 prior-spend allowance and $0.20 cleanup reserve; estimated project usage through the deadline is $29.4032. Exact resource identity and credentials remain private. No payment method or auto recharge was added.
 
 The guard computes deletion at the earlier of 2026-11-10T05:00:00Z or the affordable resource lifetime, including prior project spend and a cleanup reserve. Failed provisioning is not assumed free without a billing receipt; a conservative elapsed-rate estimate can be included. A dedicated desktop task supplies deadline deletion independently of the SSH link. No native instance-delete TTL was found in official documentation; the official CI example explicitly calls `brev delete` during cleanup.
 
@@ -30,6 +32,6 @@ The model installer verifies the pinned official Ollama 0.40.15 Linux archive, c
 
 Activation requires native `lookup_resources` and `propose_allocation` calls from the actual 30B model, a matching digest, GPU memory evidence, correct SSH identity and enabled cleanup tasks. The configured Brev provider overrides legacy local-model runner variables. If the Brev link fails later, the application labels deterministic policy fallback; it does not call a desktop or other LLM.
 
-Prepared code passed lifecycle unit tests and supervisor provider-contract tests. The actual desktop guard is enabled and reached its guarding state under the scheduled-task identity; the separate cleanup task is enabled with next run November 10 at 05:00 UTC. These task receipts do not establish that the cloud VM finished provisioning or that Brev model inference works. Activation remains gated on actual private SSH, native tools and GPU evidence.
+Code passed lifecycle unit tests and supervisor provider-contract tests. Actual private SSH, Windows forwarding, native tools and GPU evidence then passed the activation gate. The desktop guard is enabled and guarding the exact approved RUNNING instance with its SSH child; separate cleanup is enabled with next run November 10 at 05:00 UTC. A live application native plan completed in 1.225 seconds after warmup. Model outputs remain policy-validated, and a rejected output is visibly handled by the deterministic catalog policy rather than another LLM.
 
 References: [API-key scopes, expiry and revocation](https://docs.nvidia.com/brev/latest/guides/api-keys), [CLI authentication](https://docs.nvidia.com/brev/cli/getting-started), [CI cleanup example](https://docs.nvidia.com/brev/latest/guides/ci-cd), [instance deletion](https://docs.nvidia.com/brev/cli/instance-management), [pinned NVIDIA auth implementation](https://raw.githubusercontent.com/brevdev/brev-cli/v0.6.337/pkg/auth/kas.go), [official 30B model](https://ollama.com/library/nemotron-3-nano:30b).
