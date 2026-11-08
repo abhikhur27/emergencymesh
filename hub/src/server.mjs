@@ -79,6 +79,11 @@ export function createHubServer({ core, config, operatorToken, identities = new 
       }
       if (request.method === 'POST' && url.pathname === '/api/simulate' && simulation) { await jsonBody(request); return send(response, 201, await injectSimulation(core, config)); }
       let decodedPath; try { decodedPath = decodeURIComponent(url.pathname); } catch { return send(response, 400, { error: 'Invalid request path' }); }
+      const questionMatch = /^\/api\/incidents\/([0-9]+:[0-9]+:[0-9]+)\/questions(?:\/([0-9a-f]{8})\/(close))?$/.exec(decodedPath);
+      if (request.method === 'POST' && questionMatch) {
+        const body = await jsonBody(request);
+        return send(response, 200, questionMatch[3] === 'close' ? await core.closeQuestion(questionMatch[1], questionMatch[2]) : await core.askQuestion(questionMatch[1], body?.text));
+      }
       const match = /^\/api\/incidents\/([0-9]+:[0-9]+:[0-9]+)\/(review|export|location)$/.exec(decodedPath);
       if (request.method === 'POST' && match) {
         const body = await jsonBody(request);

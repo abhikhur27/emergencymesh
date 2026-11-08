@@ -11,5 +11,5 @@ if ($LASTEXITCODE -ne 0) { throw 'C++ environment initialization failed.' }
 foreach ($line in $envLines) { if ($line -match '^([^=]+)=(.*)$') { [Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process') } }
 & cl.exe /nologo /EHsc /std:c++17 /W4 /WX (Join-Path $PSScriptRoot 'mesh-hop.cpp') "/Fo$output/mesh-hop.obj" "/Fe$output/mesh-hop.exe"
 if ($LASTEXITCODE -ne 0) { throw 'Integration adapter compilation failed.' }
-& node --test (Join-Path $PSScriptRoot 'pipeline.test.mjs')
+& node --test (Join-Path $PSScriptRoot 'pipeline.test.mjs') (Join-Path $PSScriptRoot 'message-bridge.test.mjs')
 if ($LASTEXITCODE -ne 0) { throw 'Integration test failed.' }

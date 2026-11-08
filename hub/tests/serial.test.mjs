@@ -71,3 +71,34 @@ test('host receive counters distinguish no USB RX, valid, ignored and authentica
   outcome = 'rejected'; packet(); await new Promise(resolve => setImmediate(resolve)); assert.equal(bridge.state.hostStats.rejected, 1); assert.equal(bridge.state.hostStats.lastRejectCode, 'authentication-failed'); assert.equal(bridge.state.lastDiagnostic, 'rejected-frame'); assert.equal(JSON.stringify(bridge.state).includes('private value'), false);
   port.emit('data', Buffer.from('{"op":"rx","frame":"invalid"}\n')); assert.equal(bridge.state.hostStats.rxLines, 4); assert.equal(bridge.state.hostStats.rejected, 2); assert.equal(bridge.state.hostStats.lastRejectCode, 'invalid-base64'); assert.ok(bridge.state.hostStats.lastRxAt); assert.ok(bridge.state.hostStats.lastRejectedAt);
 });
+
+test('missing configured USB port stays disconnected and reconnects only that path, requiring a fresh matching status', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  class ReconnectingPort extends FakePort {
+    static attempts = [];
+    constructor(options) { super(); this.options = options; ReconnectingPort.attempts.push(this); }
+    open(callback) { if (ReconnectingPort.attempts.length === 1) return callback(new Error('Opening COM10: File not found')); super.open(callback); }
+  }
+  const bridge = await connectSerial('COM10', () => {}, () => {}, { SerialPortImpl: ReconnectingPort }); t.after(() => bridge.close());
+  assert.equal(bridge.state.mode, 'serial'); assert.equal(bridge.state.path, 'COM10'); assert.equal(bridge.state.connected, false); assert.equal(bridge.state.portOpen, false);
+  assert.equal(bridge.state.board, null); assert.ok(bridge.state.nextReconnectAt); await assert.rejects(bridge.transmit(Buffer.alloc(64)), /closed/);
+  t.mock.timers.tick(4999); assert.equal(ReconnectingPort.attempts.length, 1);
+  t.mock.timers.tick(1); const second = ReconnectingPort.attempts[1]; assert.ok(second); assert.equal(second.options.path, 'COM10');
+  assert.equal(bridge.state.readiness, 'awaiting-status'); assert.equal(bridge.state.connected, false);
+  second.emit('data', Buffer.from(`${JSON.stringify({ ...ready, role: 'companion' })}\n`)); await assert.rejects(bridge.transmit(Buffer.alloc(64)), /unverified/);
+  second.emit('data', Buffer.from(`${JSON.stringify(ready)}\n`)); assert.equal(bridge.state.connected, true); await bridge.transmit(Buffer.alloc(64));
+  second.isOpen = false; second.emit('close'); assert.equal(bridge.state.connected, false); assert.equal(bridge.state.board, null);
+  second.emit('data', Buffer.from(`${JSON.stringify(ready)}\n`)); assert.equal(bridge.state.connected, false, 'stale port status cannot restore readiness');
+  t.mock.timers.tick(5000); const third = ReconnectingPort.attempts[2]; assert.equal(third.options.path, 'COM10'); assert.equal(bridge.state.connected, false);
+  third.emit('data', Buffer.from(`${JSON.stringify(ready)}\n`)); assert.equal(bridge.state.connected, true);
+  await bridge.close(); t.mock.timers.tick(60000); assert.equal(ReconnectingPort.attempts.length, 3, 'shutdown cancels reconnection');
+});
+
+test('serial connection returns while an OS open is pending and closes a late-opened handle after shutdown', async t => {
+  class DelayedPort extends FakePort {
+    open(callback) { this.completeOpen = () => { this.isOpen = true; callback(); }; }
+  }
+  const bridge = await connectSerial('COM10', () => {}, () => {}, { SerialPortImpl: DelayedPort });
+  const port = FakePort.last; assert.equal(bridge.state.connected, false); assert.equal(bridge.state.readiness, 'opening');
+  await bridge.close(); port.completeOpen(); assert.equal(port.isOpen, false); assert.equal(bridge.state.connected, false);
+});

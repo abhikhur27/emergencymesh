@@ -1,0 +1,116 @@
+{
+  "sampleRate": 48000,
+  "channels": 2,
+  "durationSeconds": 12,
+  "peak": 0.31239224882385697,
+  "rms": 0.014484009221915362,
+  "clippedSamples": 0,
+  "events": [
+    {
+      "frame": 12,
+      "frequency": 1318.51,
+      "duration": 0.16,
+      "amplitude": 0.17,
+      "pan": 0
+    },
+    {
+      "frame": 55,
+      "frequency": 80,
+      "duration": 0.085,
+      "amplitude": 0.26,
+      "pan": 0
+    },
+    {
+      "frame": 55,
+      "frequency": 3200,
+      "duration": 0.03,
+      "amplitude": 0.12,
+      "pan": 0
+    },
+    {
+      "frame": 63,
+      "frequency": 55,
+      "duration": 0.24,
+      "amplitude": 0.42,
+      "pan": 0
+    },
+    {
+      "frame": 63,
+      "frequency": 3900,
+      "duration": 0.055,
+      "amplitude": 0.11,
+      "pan": 0
+    },
+    {
+      "frame": 118,
+      "frequency": 4000,
+      "duration": 0.038,
+      "amplitude": 0.15,
+      "pan": -0.5
+    },
+    {
+      "frame": 118,
+      "frequency": 660,
+      "duration": 0.09,
+      "amplitude": 0.075,
+      "pan": -0.5
+    },
+    {
+      "frame": 136,
+      "frequency": 4237.8523774371815,
+      "duration": 0.038,
+      "amplitude": 0.15,
+      "pan": 0
+    },
+    {
+      "frame": 136,
+      "frequency": 699.245642277135,
+      "duration": 0.09,
+      "amplitude": 0.075,
+      "pan": 0
+    },
+    {
+      "frame": 154,
+      "frequency": 4489.8481932374925,
+      "duration": 0.038,
+      "amplitude": 0.15,
+      "pan": 0.5
+    },
+    {
+      "frame": 154,
+      "frequency": 740.8249518841862,
+      "duration": 0.09,
+      "amplitude": 0.075,
+      "pan": 0.5
+    },
+    {
+      "frame": 178,
+      "frequency": 523.251,
+      "duration": 0.48,
+      "amplitude": 0.22,
+      "pan": 0
+    },
+    {
+      "frame": 181,
+      "frequency": 783.991,
+      "duration": 0.46,
+      "amplitude": 0.17,
+      "pan": 0
+    },
+    {
+      "frame": 178,
+      "frequency": 65.406,
+      "duration": 0.6,
+      "amplitude": 0.16,
+      "pan": 0
+    },
+    {
+      "frame": 244,
+      "frequency": 1318.51,
+      "duration": 0.15,
+      "amplitude": 0.08,
+      "pan": 0
+    }
+  ],
+  "provenance": "Original deterministic PCM synthesis by this project; no external samples"
+}

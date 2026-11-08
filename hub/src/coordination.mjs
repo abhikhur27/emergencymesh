@@ -1,6 +1,7 @@
 import { runLocalAgent, boundedJson } from './local-agent.mjs';
 import { incidentLocation } from './region.mjs';
 import { reportedSupplies, sourceNeedRequests } from './signal-fields.mjs';
+import { checkedCommands, messageSnapshot, messageDigest } from './message-bridge.mjs';
 
 const STATUSES = new Set(['received', 'planning', 'allocated', 'partial', 'simulated-dispatched', 'needs-review', 'paused']);
 const LABELS = { queued: 'Coordination queued', processing: 'Preparing request', shared: 'Shared with regional agent', received: 'Regional agent received', planning: 'Finding regional resources', allocated: 'Resources allocated', partial:'Some needs await resources', 'simulated-dispatched': 'Dispatch simulated', 'needs-review': 'Human attention needed', paused: 'Automation paused' };
@@ -141,12 +142,16 @@ export class CoordinationPipeline {
     }
   }
   async pollUpdates() {
-    if (this.closed || this.polling || !this.supervisorState.configured || this.core.store.state.automation.paused) return;
+    if (this.closed || this.polling || !this.supervisorState.configured) return;
     this.polling = true;
     try {
+      // Human follow-ups keep flowing when model/resource automation is paused.
+      try { await this.syncMessages(); this.supervisorState.messagingError=null; }
+      catch { this.supervisorState.messagingError='User messages are waiting for regional synchronization.'; }
       const cursor = this.core.store.state.automation.cursor || 0;
       const response = await this.fetch(`${this.runtime.supervisorUrl}/api/hub/updates?after=${cursor}&hubId=${encodeURIComponent(this.hubId)}`, { headers: { Authorization: `Bearer ${this.runtime.supervisorToken}` }, signal: AbortSignal.any([this.abort.signal, AbortSignal.timeout(7000)]) });
       const result = await boundedJson(response);
+      const questions=checkedCommands(result.questions,this.hubId);
       if (!Array.isArray(result.updates) || result.updates.length > 100 || !Number.isSafeInteger(result.cursor) || result.cursor < cursor) throw new Error('Invalid supervisor updates');
       for (const update of result.updates) if (!Number.isSafeInteger(update.seq) || update.seq <= cursor || update.seq > result.cursor || update.hubId !== this.hubId || !Number.isSafeInteger(update.revision) || update.revision < 1 || !STATUSES.has(update.status)) throw new Error('Invalid supervisor event');
       // A poll may race the POST acknowledgement. Keep the cursor until that outbox receipt is durable.
@@ -165,9 +170,50 @@ export class CoordinationPipeline {
         }
         this.core.store.state.automation.cursor = result.cursor;
       });
+      for(const command of questions)await this.applyQuestionCommand(command);
       this.supervisorState.connected = true; this.supervisorState.lastSyncAt = this.now(); this.supervisorState.error = null;if(result.agent!==undefined)this.supervisorState.agent=remoteAgent(result.agent);
     } catch { this.supervisorState.connected = false; this.supervisorState.error = 'Supervisor updates unavailable; last acknowledged state retained.'; }
     finally { this.polling = false; }
+  }
+  async postMessages(body){
+    const response=await this.fetch(`${this.runtime.supervisorUrl}/api/hub/messages`,{method:'POST',headers:{Authorization:`Bearer ${this.runtime.supervisorToken}`,'Content-Type':'application/json'},body:JSON.stringify(body),signal:AbortSignal.any([this.abort.signal,AbortSignal.timeout(7000)])});
+    const result=await boundedJson(response);
+    if(result.accepted!==true||result.caseId!==body.caseId)throw new Error('Message synchronization acknowledgment invalid');
+  }
+  async syncOneMessage(id,{force=false,commandErrors=[]}={}){
+    const item=this.core.store.get(id);if(!item?.coordination||item.coordination.sharedRevision<1||item.simulated)return;
+    const body=messageSnapshot(this.core,item,commandErrors),digest=messageDigest(body);
+    if(!force&&digest===item.coordination.messageSyncDigest)return;
+    if(!force&&!body.canContactUser&&!body.followups.length&&!item.coordination.messageSyncDigest)return;
+    await this.postMessages(body);
+    if(commandErrors.length)return;
+    await this.transaction(()=>{const current=this.core.store.get(id);if(current?.coordination)current.coordination.messageSyncDigest=digest;});
+  }
+  async syncMessages(){
+    let count=0;
+    for(const item of this.core.store.state.incidents){
+      if(!item.coordination||item.coordination.sharedRevision<1||item.simulated)continue;
+      const body=messageSnapshot(this.core,item),digest=messageDigest(body);
+      if(digest===item.coordination.messageSyncDigest||!body.canContactUser&&!body.followups.length&&!item.coordination.messageSyncDigest)continue;
+      await this.syncOneMessage(item.id);if(++count>=8)break;
+    }
+  }
+  async applyQuestionCommand(command){
+    const item=this.core.store.state.incidents.find(i=>i.coordination?.caseId===command.caseId&&!i.simulated);
+    if(!item){await this.postMessages({caseId:command.caseId,canContactUser:false,followups:[],commandErrors:[{id:command.id,code:'unknown-case'}]});return;}
+    let errorCode=null;
+    try {
+      if(command.action==='close'){
+        const question=this.core.publicIncident(item).followups?.find(q=>q.id===command.id);
+        if(!question)errorCode='closed';
+        else await this.core.closeQuestion(item.id,command.id);
+      }else await this.core.askQuestion(item.id,command.text,{questionId:command.id,source:'regional'});
+    }catch(error){
+      if(![400,404,409].includes(error.status))throw error;
+      errorCode=error.status===404?'unknown-case':error.status===400?'invalid-question':this.core.publicIncident(this.core.store.get(item.id)).canContactUser!==true?'phone-not-ready':'blocked';
+    }
+    // askQuestion/closeQuestion own core.exclusive; never invoke them inside transaction.
+    await this.syncOneMessage(item.id,{force:true,commandErrors:errorCode?[{id:command.id,code:errorCode}]:[]});
   }
   async idle() { await this.runPromise; await this.core.pending; }
   async close() { this.closed = true; clearInterval(this.timer); this.abort.abort(); await this.idle(); }

@@ -1,0 +1,20 @@
+import {existsSync, mkdirSync} from 'node:fs';
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+import path from 'node:path';
+
+const root = fileURLToPath(new URL('../', import.meta.url));
+const product = path.join(root, 'public/product/turntable.mp4');
+if (!existsSync(product)) throw new Error('Final export requires the actual Blender product clip at public/product/turntable.mp4');
+const ffprobe = process.env.FFPROBE_PATH ?? 'C:/ffmpeg/bin/ffprobe.exe';
+const checked = spawnSync(ffprobe, ['-v', 'error', '-show_streams', '-show_format', '-of', 'json', product], {encoding: 'utf8'});
+if (checked.status !== 0) throw new Error(checked.stderr || 'Unable to inspect product clip');
+const productMetadata = JSON.parse(checked.stdout);
+const stream = productMetadata.streams.find(item => item.codec_type === 'video');
+if (stream?.width !== 1920 || stream?.height !== 1080 || Number(stream.nb_frames) !== 120 || Math.abs(Number(productMetadata.format.duration) - 4) > 0.05) throw new Error('Expected a 1920×1080, 120-frame, four-second native product clip');
+mkdirSync(path.join(root, 'dist'), {recursive: true});
+const cli = path.join(root, 'node_modules/@remotion/cli/remotion-cli.js');
+const result = spawnSync(process.execPath, [cli, 'render', 'src/index.ts', 'RescueMeshTactileDemo', 'dist/RescueMesh-Product-Demo.mp4', '--codec=h264', '--crf=17', '--pixel-format=yuv420p', '--color-space=bt709', '--image-format=png', '--audio-codec=aac', '--audio-bitrate=256k', '--concurrency=4'], {cwd: root, stdio: 'inherit'});
+if (result.status !== 0) process.exit(result.status || 1);
+const verification = spawnSync(process.execPath, [path.join(root, 'scripts/verify-output.mjs')], {cwd: root, stdio: 'inherit'});
+process.exit(verification.status ?? 1);

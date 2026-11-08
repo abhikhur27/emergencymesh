@@ -13,7 +13,7 @@ if (-not (Test-Path -LiteralPath (Join-Path $destinationRoot '.git') -PathType C
 $remote = (& git -C $destinationRoot config --get remote.origin.url).Trim()
 if ($LASTEXITCODE -ne 0 -or $remote -notmatch '^(https://github\.com/abhikhur27/emergencymesh(?:\.git)?|git@github\.com:abhikhur27/emergencymesh\.git)$') { throw 'Destination is not the expected RescueMesh public repository.' }
 
-$extensions = @('.md','.js','.mjs','.cjs','.json','.html','.css','.svg','.swift','.pbxproj','.xcscheme','.plist','.xcworkspacedata','.xcsettings','.h','.cpp','.ini','.ps1','.sh','.png','.jpg','.jpeg','.pdf','.fcstd','.stl','.step','.stp','.3mf','.txt','.yml','.yaml')
+$extensions = @('.md','.js','.mjs','.cjs','.json','.html','.css','.svg','.swift','.pbxproj','.xcscheme','.plist','.xcworkspacedata','.xcsettings','.h','.cpp','.ini','.ps1','.sh','.png','.jpg','.jpeg','.pdf','.fcstd','.stl','.step','.stp','.3mf','.txt','.yml','.yaml','.ts','.tsx','.wav','.mp4')
 $blockedSegments = @('node_modules','.emergency','.supervisor','.private','.pio','.native','.build','.git','.venv','DerivedData','xcuserdata','Vendor','TemocModel','dist','runtime','logs','private','receipts','releases','artifacts')
 $fixedFiles = @('README.md','firmware/README.md','firmware/platformio.ini','firmware/verification.json','hub/README.md','hub/DESIGN.md','hub/package.json','hub/package-lock.json','supervisor/README.md','supervisor/package.json','supervisor/package-lock.json','supervisor/.env.example')
 $publicDocs = @('ARCHITECTURE.md','PROTOCOL.md','DEMO.md','VERIFICATION.md','device-security.md','MAC-HANDOFF.md','cad-install.md','runtime-setup.md','OPERATING-20261108.md','map-sources.md','brev-verification-20261108.json','TEMOC.md','TECHSTACK.md')
@@ -38,6 +38,10 @@ function Test-PublicPath([string]$Relative) {
     if ($Relative -match '^hardware/([^/]+)$' -and $publicHardware -contains $Matches[1]) { return $true }
     if ($Relative -match '^design/2026-11-07/([^/]+)$' -and $currentDesign -contains $Matches[1]) { return $true }
     if ($Relative -match '^design/2026-11-07/journey/(RescueMesh-Storyboard\.html|app\.js|style\.css|index\.html)$') { return $true }
+    if ($Relative -match '^demo/rescuemesh-tactile/(README\.md|BRIEF\.md|package\.json|package-lock\.json|tsconfig\.json|remotion\.config\.ts)$') { return $true }
+    if ($Relative -match '^demo/rescuemesh-tactile/src/[A-Za-z0-9_/-]+\.(ts|tsx)$') { return $true }
+    if ($Relative -match '^demo/rescuemesh-tactile/scripts/(generate-audio|render-final|verify-output)\.mjs$') { return $true }
+    if ($Relative -match '^demo/rescuemesh-tactile/public/(brand/rescuemesh-(mark|wordmark)\.png|audio/(tactile-score\.wav|synthesis\.json)|product/turntable\.mp4)$') { return $true }
     return $false
 }
 $selected = @(Get-ChildItem -LiteralPath $sourceRoot -Recurse -File | Where-Object {

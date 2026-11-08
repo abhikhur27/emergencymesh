@@ -6,6 +6,8 @@ import { OperatorAuth } from './auth.mjs';
 
 const publicRoot=fileURLToPath(new URL('../public/',import.meta.url));
 const staticFiles=new Map([['/',['index.html','text/html; charset=utf-8']],['/app.js',['app.js','text/javascript; charset=utf-8']],['/ops-metrics.js',['ops-metrics.js','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']],['/assets/rescuemesh-wordmark.png',['assets/rescuemesh-wordmark.png','image/png']],['/assets/rescuemesh-mark.png',['assets/rescuemesh-mark.png','image/png']],['/assets/rescuemesh-icon.png',['assets/rescuemesh-icon.png','image/png']]]);
+for(const name of ['interface.js','ui-kit.js'])staticFiles.set('/'+name,[name,'text/javascript; charset=utf-8']);
+for(const [name,type]of [['leaflet.js','text/javascript; charset=utf-8'],['leaflet.css','text/css; charset=utf-8'],['SOURCE.json','application/json; charset=utf-8'],['LICENSE.txt','text/plain; charset=utf-8'],...['layers-2x.png','layers.png','marker-icon-2x.png','marker-icon.png','marker-shadow.png'].map(name=>['images/'+name,'image/png'])])staticFiles.set('/assets/leaflet-1.9.4/'+name,['assets/leaflet-1.9.4/'+name,type]);
 const hash=value=>createHash('sha256').update(value).digest();
 function secretEqual(a,b){return typeof a==='string'&&typeof b==='string'&&timingSafeEqual(hash(a),hash(b));}
 const fail=(message,status)=>Object.assign(new Error(message),{status});
@@ -28,8 +30,8 @@ export async function createSupervisorServer({core,operatorToken,username='opera
     return result;
   };
   const server=createServer(async(request,response)=>{
-    response.setHeader('Cache-Control','no-store');response.setHeader('X-Content-Type-Options','nosniff');response.setHeader('X-Frame-Options','DENY');response.setHeader('Referrer-Policy','no-referrer');
-    response.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+    response.setHeader('Cache-Control','no-store');response.setHeader('X-Content-Type-Options','nosniff');response.setHeader('X-Frame-Options','DENY');response.setHeader('Referrer-Policy','strict-origin-when-cross-origin');
+    response.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
     try{
       const host=request.headers.host;
       const origin=host===localHost?localOrigin:publicUrl&&host===publicUrl.host?publicUrl.origin:null;
@@ -41,6 +43,7 @@ export async function createSupervisorServer({core,operatorToken,username='opera
       if(url.pathname.startsWith('/api/hub/')){
         const hubId=machineHub(request);if(!hubId)return send(response,401,{error:'Hub authentication required'});
         if(request.method==='POST'&&url.pathname==='/api/hub/cases'){const accepted=await core.receive(await body(request),{allowedHubId:hubId});return send(response,202,{...accepted,agent:core.planner.status()});}
+        if(request.method==='POST'&&url.pathname==='/api/hub/messages')return send(response,200,await core.receiveMessages(await body(request),{allowedHubId:hubId}));
         if(request.method==='GET'&&url.pathname==='/api/hub/updates'){
           if(url.searchParams.get('hubId')&&url.searchParams.get('hubId')!==hubId)return send(response,403,{error:'Hub scope rejected'});
           const afterText=url.searchParams.get('after')||'0';if(!/^\d{1,16}$/.test(afterText))return send(response,400,{error:'Invalid update cursor'});
@@ -61,6 +64,10 @@ export async function createSupervisorServer({core,operatorToken,username='opera
       if(request.method==='POST'&&url.pathname==='/api/logout'){await body(request);await auth.revoke(session);return send(response,200,{ok:true},{'Set-Cookie':'rm_supervisor=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0'+secure});}
       if(request.method==='POST'&&url.pathname==='/api/automation'){const input=await body(request);await core.setPaused(input.paused);return send(response,200,{ok:true});}
       if(request.method==='POST'&&url.pathname==='/api/simulation'){const result=await core.simulationCommand(await body(request));return send(response,200,{ok:true,result});}
+      const question=/^\/api\/cases\/([^/]+)\/questions$/.exec(url.pathname);
+      if(request.method==='POST'&&question){const input=await body(request);if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(k=>k!=='text'))return send(response,400,{error:'Only question text is accepted'});return send(response,202,{question:await core.askQuestion(decodeURIComponent(question[1]),input.text)});}
+      const closeQuestion=/^\/api\/cases\/([^/]+)\/questions\/([0-9a-f]{8})\/close$/.exec(url.pathname);
+      if(request.method==='POST'&&closeQuestion){await body(request);return send(response,200,{question:await core.closeQuestion(decodeURIComponent(closeQuestion[1]),closeQuestion[2])});}
       const match=/^\/api\/cases\/([^/]+)\/resolve$/.exec(url.pathname);
       if(request.method==='POST'&&match){await core.resolve(decodeURIComponent(match[1]),await body(request));return send(response,200,{ok:true});}
       return send(response,404,{error:'Not found'});

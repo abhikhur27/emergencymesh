@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile, rename, readdir, open } from 'node:fs/promises';
 import { join, resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { receiverHealth } from '../src/receiver-health.mjs';
 const hub = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const data = join(hub, '.emergency');
 const configFile = join(data, 'session-config.json');
@@ -88,14 +89,16 @@ async function verifyReceiver(probe = null) {
     }
     const response = await fetch(`${origin}/api/state`, { headers: { Cookie: probe.cookie }, signal: AbortSignal.timeout(5000) });
     const value = await response.json();
-    if (!response.ok || value.simulation || value.link?.mode !== 'serial' || value.link?.readiness !== 'ready' || !value.link.connected || value.ai?.model !== 'nemotron-3-nano:4b') throw new Error('Physical receiver readiness check failed');
-    state.lastVerifiedAt = new Date().toISOString(); state.radioReady = true; state.savedReports = value.incidents.length;
+    if (!response.ok) throw new Error('Receiver dashboard check failed');
+    const health = receiverHealth(value, { serialPort: state.serialPort });
+    state.lastVerifiedAt = new Date().toISOString(); state.dashboardReady = true; Object.assign(state, health);
   } finally {
     if (ownsProbe) await logoutProbe(probe);
   }
 }
 async function launch(release, config) {
   await stopChild();
+  state.serialPort = config.serialPort;
   const stdout = await open(join(data, 'session-hub.stdout.log'), 'a'); const stderr = await open(join(data, 'session-hub.stderr.log'), 'a');
   const minutes = Math.max(0.1, Math.min(1440, (Date.parse(config.untilUtc) - Date.now()) / 60000));
   child = fork(join(release.root, 'src', 'cli.mjs'), ['start','--data',data,'--serial',config.serialPort,'--ollama','--model','nemotron-3-nano:4b','--minutes',String(minutes)], { cwd: release.root, windowsHide: true, stdio: ['ignore',stdout.fd,stderr.fd,'ipc'] });
@@ -105,7 +108,7 @@ async function launch(release, config) {
   try { for (let attempt = 0; attempt < 20; attempt++) {
     await sleep(750);
     if (child.exitCode !== null || child.signalCode !== null) throw new Error('Receiver exited during startup');
-    try { await verifyReceiver(probe); active = release; lastGood = release; await saveGood(release); state.state = 'running'; await save(); return; } catch { /* USB reset and readiness are bounded. */ }
+    try { await verifyReceiver(probe); active = release; lastGood = release; await saveGood(release); state.state = 'running'; await save(); return; } catch { /* Authenticated dashboard startup is bounded; radio readiness is independent. */ }
   } } finally { await logoutProbe(probe); }
   throw new Error('Receiver did not verify within startup budget');
 }
@@ -131,7 +134,7 @@ try {
     if (Date.now() >= nextHealth && child && child.exitCode === null && child.signalCode === null) {
       nextHealth = Date.now() + 30000;
       try { await verifyReceiver(); healthFailures = 0; await save(); }
-      catch { state.radioReady = false; if (++healthFailures >= 3) { state.lastRestartReason = 'Three consecutive physical receiver checks failed'; await stopChild(); healthFailures = 0; } await save(); }
+      catch { state.dashboardReady = false; state.radioReady = false; if (++healthFailures >= 3) { state.lastRestartReason = 'Three consecutive authenticated dashboard checks failed'; await stopChild(); healthFailures = 0; } await save(); }
     }
     let bundle = null;
     try { bundle = await source(); state.sourceError = null; }

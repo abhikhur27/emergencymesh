@@ -65,9 +65,9 @@ export function validateReadiness(board, { region = 1, keyId = 1, frequency = 91
 
 export async function connectSerial(path, onFrame, onState = () => {}, { region = 1, keyId = 1, frequency = 915, SerialPortImpl } = {}) {
   const Port = SerialPortImpl || (await import('serialport')).SerialPort;
-  const port = new Port({ path, baudRate: 115200, autoOpen: false });
+  let port = null, stopped = false, reconnectTimer = null;
   const lines = new SerialLines(onFrame);
-  const state = { mode: 'serial', path, portOpen: false, connected: false, readiness: 'port-closed', board: null, lastDiagnostic: null, hostStats: { rxLines: 0, accepted: 0, rejected: 0, ignored: 0, lastRxAt: null, lastRejectedAt: null, lastRejectCode: null } };
+  const state = { mode: 'serial', path, portOpen: false, connected: false, readiness: 'port-closed', board: null, lastDiagnostic: null, nextReconnectAt: null, hostStats: { rxLines: 0, accepted: 0, rejected: 0, ignored: 0, lastRxAt: null, lastRejectedAt: null, lastRejectCode: null } };
   const readinessTimers = [];
   const clearReadinessTimers = () => { for (const timer of readinessTimers.splice(0)) clearTimeout(timer); };
   const update = () => onState(structuredClone(state));
@@ -87,30 +87,61 @@ export async function connectSerial(path, onFrame, onState = () => {}, { region 
     if (/^board-error:radio_(initialization_failed|receive_failed|unavailable)$/.test(message)) { state.connected = false; state.readiness = 'radio-failed'; }
     update();
   });
-  port.on('data', chunk => lines.push(chunk));
-  port.on('close', () => { clearReadinessTimers(); state.portOpen = false; state.connected = false; state.readiness = 'port-closed'; state.lastDiagnostic = 'port-closed'; update(); });
-  port.on('error', () => { state.connected = false; state.readiness = 'port-error'; state.lastDiagnostic = 'port-error'; update(); });
-  await new Promise((resolve, reject) => port.open(error => error ? reject(error) : resolve()));
-  state.portOpen = true; state.readiness = 'awaiting-status'; update();
-  const requestStatus = () => { if (port.isOpen) port.write('{"op":"status"}\n', error => { if (error) { state.lastDiagnostic = 'status-query-failed'; update(); } }); };
-  // USB UART may reset the board on open. Bounded retries recover boot-time status without a continuing poller.
-  readinessTimers.push(setTimeout(requestStatus, 1000), setTimeout(requestStatus, 3000), setTimeout(() => {
-    if (state.readiness === 'awaiting-status' || state.readiness === 'invalid-status') { state.readiness = 'status-unavailable'; state.connected = false; update(); }
-  }, 6000));
-  requestStatus();
+  const scheduleReconnect = () => {
+    if (stopped || reconnectTimer) return;
+    state.nextReconnectAt = Date.now() + 5000;
+    reconnectTimer = setTimeout(() => { reconnectTimer = null; openPort(); }, 5000); reconnectTimer.unref?.();
+  };
+  const disconnected = (candidate, reason) => {
+    if (stopped || port !== candidate) return;
+    port = null; clearReadinessTimers(); lines.buffer = []; lines.discarding = false;
+    state.portOpen = false; state.connected = false; state.readiness = reason; state.board = null; state.lastDiagnostic = reason;
+    scheduleReconnect(); update();
+    if (candidate.isOpen) candidate.close(() => {});
+  };
+  function openPort() {
+    if (stopped) return;
+    const candidate = new Port({ path, baudRate: 115200, autoOpen: false }); port = candidate;
+    state.nextReconnectAt = null; state.readiness = 'opening'; state.lastDiagnostic = null; update();
+    const current = () => !stopped && port === candidate;
+    candidate.on('data', chunk => { if (current()) lines.push(chunk); });
+    candidate.on('close', () => disconnected(candidate, 'port-closed'));
+    candidate.on('error', () => disconnected(candidate, 'port-error'));
+    candidate.open(error => {
+      if (!current()) { if (candidate.isOpen) candidate.close(() => {}); return; }
+      if (error) { disconnected(candidate, 'port-unavailable'); return; }
+      state.portOpen = true; state.readiness = 'awaiting-status'; update();
+      const requestStatus = () => {
+        if (current() && candidate.isOpen) candidate.write('{"op":"status"}\n', error => { if (error) disconnected(candidate, 'port-error'); });
+      };
+      // Each new USB handle must supply its own matching status; opening never implies RF readiness.
+      readinessTimers.push(setTimeout(requestStatus, 1000), setTimeout(requestStatus, 3000), setTimeout(() => {
+        if (current() && (state.readiness === 'awaiting-status' || state.readiness === 'invalid-status')) { state.readiness = 'status-unavailable'; state.connected = false; update(); }
+      }, 6000));
+      for (const timer of readinessTimers) timer.unref?.();
+      requestStatus();
+    });
+  }
+  // The authenticated website must start even while the configured USB port is absent or opening.
+  openPort();
   return {
     transmit: frame => new Promise((resolve, reject) => {
-      if (!port.isOpen) return reject(new Error('Radio serial port closed'));
+      const candidate = port;
+      if (stopped || !candidate?.isOpen) return reject(new Error('Radio serial port closed'));
       if (!state.connected || state.readiness !== 'ready') return reject(new Error('Board radio readiness or profile unverified'));
       let finished = false;
       const finish = error => { if (finished) return; finished = true; clearTimeout(timer); error ? reject(error) : resolve(); };
       const timer = setTimeout(() => finish(new Error('Radio serial write timed out')), 5000);
-      port.write(`${JSON.stringify({ op: 'tx', frame: frame.toString('base64') })}\n`, error => {
+      candidate.write(`${JSON.stringify({ op: 'tx', frame: frame.toString('base64') })}\n`, error => {
         if (error) return finish(error);
-        port.drain(finish);
+        candidate.drain(finish);
       });
     }),
-    close: () => new Promise(resolve => { clearReadinessTimers(); if (!port.isOpen) resolve(); else port.close(() => resolve()); }),
+    close: () => new Promise(resolve => {
+      stopped = true; clearTimeout(reconnectTimer); reconnectTimer = null; clearReadinessTimers();
+      const candidate = port; port = null; state.portOpen = false; state.connected = false; state.readiness = 'port-closed'; state.board = null; state.nextReconnectAt = null; update();
+      if (!candidate?.isOpen) resolve(); else candidate.close(() => resolve());
+    }),
     state,
   };
 }

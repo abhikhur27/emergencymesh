@@ -52,9 +52,11 @@ async function main() {
   const { origin } = await app.listen(port);
   await identities.setDevices(publicDevices(config)); await pipeline.start();
   const databaseTimer = setInterval(() => { void identities.syncMongo(); }, 10000); databaseTimer.unref();
+  let lastFollowupWarning = 0;
+  const followupTimer = setInterval(() => { void core.tickFollowups().catch(() => { if (Date.now() - lastFollowupWarning > 60000) { console.error('Follow-up retry could not be saved; the existing message remains queued.'); lastFollowupWarning = Date.now(); } }); }, 1000); followupTimer.unref();
   console.log(`RescueMesh ${runtime.hubName} hub: ${origin}\nOperator credential file: ${tokenFile}\nMode: ${link.mode}. Emergency-service dispatch is simulated.\nBounded session ends after ${minutes} minutes. Ctrl+C stops it sooner.`);
   let stopping = false;
-  const stop = async () => { if (stopping) return; stopping = true; clearTimeout(timer); clearInterval(databaseTimer); await pipeline.close(); await app.close(); if (radio) await radio.close(); if (process.connected) process.disconnect(); process.exitCode = 0; };
+  const stop = async () => { if (stopping) return; stopping = true; clearTimeout(timer); clearInterval(databaseTimer); clearInterval(followupTimer); await pipeline.close(); await core.pending; await app.close(); if (radio) await radio.close(); if (process.connected) process.disconnect(); process.exitCode = 0; };
   const timer = setTimeout(stop, minutes * 60000);
   process.once('SIGINT', stop); process.once('SIGTERM', stop);
   // A forked physical receiver must not outlive its controlling session owner.

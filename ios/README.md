@@ -51,3 +51,11 @@ Position is included only if valid and captured within 2 minutes of queuing, wit
 The current Temoc concept is `design/temoc-target.png`; the earlier request-flow concept is `design/rescuemesh-phone.png` (1670×941). Native PDF/PNG logo assets and the magenta `#E20074` accent live in `RescueMesh.xcassets`. Report, My requests, Temoc and Setup use native navigation. A reported landmark stays in the user's note; the UI never invents a location from arbitrary text. Generated concepts are design evidence; visual fidelity, Dynamic Type and keyboard behavior require actual simulator/device captures.
 
 Primary API references: [Core Bluetooth restoration](https://developer.apple.com/documentation/corebluetooth/cbcentralmanageroptionrestoreidentifierkey), [notification-state callback](https://developer.apple.com/documentation/corebluetooth/cbperipheraldelegate/peripheral(_:didupdatenotificationstatefor:error:)), [background constraints](https://developer.apple.com/library/archive/documentation/NetworkingInternetWeb/Conceptual/CoreBluetooth_concepts/CoreBluetoothBackgroundProcessingForIOSApps/PerformingTasksWhileYourAppIsInTheBackground.html).
+
+## Hub questions and phone replies
+
+The local or regional desk can ask a short question from an existing radio report. The updated app registers messaging support automatically and shows the question inside that request; the user replies there without creating another incident. Fresh authorized GPS is included with the answer when available, even when the Report tab is not open. The original report and its review status stay unchanged.
+
+Deploy the updated hubs before installing this app. The currently deployed v1 companion, relay and hub firmware carries these encrypted messages without a reflash. Older phone apps cannot receive questions and remain explicitly unavailable for messaging. Capability readiness requires a distinct authenticated acknowledgment, not an ordinary report receipt. See docs/PROTOCOL.md for the66-byte question and97-byte answer budgets.
+
+Native verification for this update passed35 XCTest methods on the iOS18.5 arm64 simulator with Xcode16.4. Five public synthetic packet vectors match Node AES-GCM output byte for byte. Physical phone-to-mesh question/reply acceptance is still required.

@@ -1,52 +1,38 @@
 {
-  "checkedAt": "2026-11-08T16:07:08.9298976Z",
-  "scope": "Follow-up application update: native verification pending",
+  "checkedAt": "2026-11-08T16:10:41Z",
+  "scope": "Native Xcode simulator build and35 XCTest methods including encrypted questions/replies and exact cross-language vectors; physical radio acceptance pending",
+  "run": "https://github.com/abhikhur27/emergencymesh/actions/runs/42498293166",
+  "commit": "8eed5f60012d3245ac7b17007190fd9a6d96814d",
+  "xcode": "16.4 (16F6)",
+  "simulator": "iPhone16Pro /iOS18.5 /arm64",
   "appSwiftSources": 13,
   "testSwiftSources": 2,
   "xctestMethodsAuthored": 35,
-  "nativeXcodeBuild": false,
-  "followupFixtureSha256": "72e2ad54e2236193c9d5a47973e62948c54153bb17764d531eb81ee6495faba3",
-  "previousNativeVerification": {
-    "checkedAt": "2026-11-08T12:41:04.3111057Z",
-    "scope": "Native Xcode simulator build and XCTest; real macOS model inference; physical iPhone acceptance pending",
-    "run": "https://github.com/abhikhur27/emergencymesh/actions/runs/42480891780",
-    "commit": "0281a246b12a92f72e2157c949e2ff5166619e63",
-    "xcode": "16.4 (16F6)",
-    "simulator": "iPhone 16 Pro / iOS 18.5 / arm64",
-    "appSwiftSources": 13,
-    "testSwiftSources": 2,
-    "xctestMethodsAuthored": 24,
-    "xctestExecuted": 24,
-    "xctestFailures": 0,
-    "nativeXcodeBuild": true,
-    "frameworkRestoration": "Official ZIP verified, macOS ditto extraction and five framework symlink checks passed",
-    "nativeSmoke": {
-      "chatAPIContacted": false,
-      "contextTokens": 2048,
-      "elapsedMs": 19854,
-      "maximumReplyTokens": 32,
-      "model": "Qwen2.5-1.5B-Instruct-Q4_K_M",
-      "modelSha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
-      "nativeGeneration": true,
-      "platform": "macOS acceptance runner, not iPhone",
-      "radioContacted": false,
-      "reply": "For a storm forecast tomorrow, you can pack:\n1. A flashlight and extra batteries\n2. A first aid kit",
-      "replyCharacters": 99
-    },
-    "simulatorRenderOrInteraction": false,
-    "iPhonePerformanceVerified": false,
-    "physicalBLEOrPhonePowerOrLoRa": false,
-    "goldenFixture": {
-      "matchesNodeHub": true,
-      "data": "Public synthetic key and reports only",
-      "sha256": "75fba5990b98544f7998c44649684ac9033bfb64f0c393ddfd732c7fe9ac1f46"
-    },
-    "uiTargets": {
-      "nativeVisualMatchVerified": false,
-      "report": "User supplied one-screen sketch",
-      "temoc": "design/temoc-target.png"
-    },
-    "nextVerification": "Install on a base iPhone15, measure memory/latency/thermal behavior, check native layout and VoiceOver, exercise GPS and physical companion-to-hub receipt, and verify Temoc in Airplane Mode with Stop/relaunch/history."
+  "xctestExecuted": 35,
+  "xctestFailures": 0,
+  "nativeXcodeBuild": true,
+  "frameworkRestoration": "Pinned official archive verified; macOS ditto extraction and five symlink checks passed",
+  "nativeSmoke": {
+    "chatAPIContacted": false,
+    "contextTokens": 2048,
+    "elapsedMs": 18824,
+    "maximumReplyTokens": 32,
+    "model": "Qwen2.5-1.5B-Instruct-Q4_K_M",
+    "modelSha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+    "nativeGeneration": true,
+    "platform": "macOS acceptance runner, not iPhone",
+    "radioContacted": false,
+    "reply": "For a storm forecast tomorrow, you can pack:\n1. A flashlight and extra batteries\n2. A first aid kit",
+    "replyCharacters": 99
   },
-  "physicalBLEOrPhonePowerOrLoRa": false
+  "physicalBLEOrPhonePowerOrLoRa": false,
+  "iPhonePerformanceVerified": false,
+  "simulatorRenderOrInteraction": false,
+  "followupFixture": {
+    "sha256": "72e2ad54e2236193c9d5a47973e62948c54153bb17764d531eb81ee6495faba3",
+    "matchesNodeHub": true,
+    "syntheticOnly": true,
+    "vectors": 5
+  },
+  "nextVerification": "Install updated app on physical iPhone, connect companion, send report and verify hub question, authenticated answer and refreshed reply GPS. No firmware reflash is required for current wirev1 boards."
 }

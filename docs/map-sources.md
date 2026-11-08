@@ -26,3 +26,9 @@ The PDF itself declares no geographic reference system. A provisional 20-point a
 The JSON copies are byte-identical; all 24 feature IDs are unique; all anchors lie inside both their bounds and rendered source footprints. ECSW and ECSS use distinct original paths. The neutral map was rendered and visually checked at enlarged campus scale. A 2017 ArcGIS point dataset was inspected but rejected as the source of current campus geometry because it predates newer buildings.
 
 No explicit open-data license is stated in the source map metadata. Retain source attribution. The asset contains no private reports, user GPS samples, credentials, or live radio coverage claims.
+
+## Regional street map — November8 update
+
+The regional desk uses Leaflet1.9.4 (BSD-2-Clause, vendored reviewed assets) with the standard OpenStreetMap raster service at https://tile.openstreetmap.org/{z}/{x}/{y}. Public approximate ECSW, Plano, Garland and Addison hub landmarks anchor the view. The selected saved allocation supplies each handoff line; unallocated needs draw no handoff. These connections are resource exchanges, not driving routes or measured radio coverage.
+
+Map controls support pan, zoom, keyboard interaction and hub selection. Visible Leaflet/OpenStreetMap attribution is retained. The browser sends its public origin as Referer, caches ordinary viewed tiles, and performs no tile prefetch or offline downloads. Tile access needs Internet; the offline campus vector remains independent. Sources: https://leafletjs.com/examples/quick-start/ and https://operations.osmfoundation.org/policies/tiles/ .

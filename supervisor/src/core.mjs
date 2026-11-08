@@ -3,6 +3,7 @@ import { validateCase, bodyDigest, deriveNeed, deriveNeeds, immutableSource, TOW
 import { event, publish, available } from './store.mjs';
 import { NemotronPlanner } from './planner.mjs';
 import { SimulatedDispatchAdapter } from './dispatch.mjs';
+import { questionText, questionId, newQuestionId, validateMessageSnapshot, mergeSourceQuestion, openQuestion, messagingError } from './messaging.mjs';
 
 const nowDefault=()=>Date.now();
 const allocationsOf=item=>Array.isArray(item.allocations)?item.allocations:item.allocation?[item.allocation]:[];
@@ -140,6 +141,66 @@ export class SupervisorCore {
     this.enqueue(caseId);
   }
   async contact(hubId){const previous=this.store.state.hubs.find(h=>h.id===hubId)?.lastContactAt;if(previous&&this.now()-previous<30000)return;await this.store.transact(state=>{const hub=state.hubs.find(h=>h.id===hubId);if(hub)hub.lastContactAt=this.now();});}
+  async askQuestion(caseId,text){
+    text=questionText(typeof text==='string'?text.trim():text);
+    return this.store.transact(state=>{
+      const item=state.cases.find(c=>c.caseId===caseId&&!c.archived);
+      if(!item)throw messagingError('Case not found',404);
+      if(item.internalSimulation||item.source.kind!=='radio'||state.hubs.find(h=>h.id===item.hubId)?.simulated!==false)throw messagingError('Only a physical source hub can contact a phone',409);
+      if(item.canContactUser!==true)throw messagingError('The updated phone app has not connected to the source hub',409);
+      item.followups||=[];item.followupCommands||=[];
+      if(item.followups.length>=12||item.followups.some(openQuestion))throw messagingError('A question is already waiting or the conversation is full',409);
+      const pending=state.cases.flatMap(c=>c.followupCommands||[]).filter(q=>q.status==='pending');
+      if(pending.length>=8)throw messagingError('The regional message queue is full',409);
+      const id=newQuestionId(new Set(item.followups.map(q=>q.id))),createdAt=this.now();
+      const question={id,text,source:'regional',createdAt,status:'queued-to-local-hub',attemptCount:0,lastAttemptAt:null,nextAttemptAt:null};
+      item.followups.push(question);item.followupCommands.push({id,text,action:'ask',createdAt,status:'pending'});item.updatedAt=this.now();
+      return structuredClone(question);
+    });
+  }
+  async closeQuestion(caseId,id){
+    questionId(id);
+    return this.store.transact(state=>{
+      const item=state.cases.find(c=>c.caseId===caseId&&!c.archived);if(!item)throw messagingError('Case not found',404);
+      const q=item.followups?.find(q=>q.id===id);if(!q)throw messagingError('Question not found',404);
+      if(['answered','closed','blocked'].includes(q.status))return structuredClone(q);
+      item.followupCommands||=[];
+      let command=item.followupCommands.find(c=>c.id===id);
+      if(!command){command={id,text:q.text,createdAt:this.now()};item.followupCommands.push(command);}
+      Object.assign(command,{action:'close',status:'pending'});q.status='closing';item.updatedAt=this.now();return structuredClone(q);
+    });
+  }
+  async receiveMessages(input,{allowedHubId}={}){
+    const snapshot=validateMessageSnapshot(input);
+    return this.store.transact(state=>{
+      const item=state.cases.find(c=>c.caseId===snapshot.caseId&&!c.archived);
+      if(!item)throw messagingError('Case not found',404);
+      if(!allowedHubId||item.hubId!==allowedHubId||item.internalSimulation||item.source.kind!=='radio'||state.hubs.find(h=>h.id===allowedHubId)?.simulated!==false)throw messagingError('Message source scope rejected',403);
+      item.followups||=[];item.followupCommands||=[];
+      for(const incoming of snapshot.followups){
+        const index=item.followups.findIndex(q=>q.id===incoming.id),previous=index>=0?item.followups[index]:null;
+        const command=item.followupCommands.find(q=>q.id===incoming.id);
+        if(incoming.source==='regional'&&!command)throw messagingError('Unknown regional question',409);
+        if(command&&command.text!==incoming.text)throw messagingError('Conflicting question identity',409);
+        const merged=mergeSourceQuestion(previous,incoming);
+        if(index>=0)item.followups[index]=merged;else{if(item.followups.length>=12)throw messagingError('Conversation capacity reached',409);item.followups.push(merged);}
+        if(command&&!(command.action==='close'&&!['closed','answered'].includes(incoming.status)))command.status='accepted';
+      }
+      for(const result of snapshot.commandErrors){
+        const command=item.followupCommands.find(q=>q.id===result.id),q=item.followups.find(q=>q.id===result.id);
+        if(!command||!q)throw messagingError('Unknown command result',409);
+        if(q.status==='answered'||q.status==='closed')continue;
+        if(result.code==='closed'&&command.action==='close'){q.status='closed';command.status='accepted';}
+        else{q.status='blocked';q.reason=result.code==='phone-not-ready'?'The phone has not advertised the updated app.':result.code==='unknown-case'?'The source hub no longer has this case.':'The source hub could not accept this question. Check its conversation before trying again.';command.status='blocked';command.error=result.code;}
+      }
+      item.canContactUser=snapshot.canContactUser;item.updatedAt=this.now();
+      const hub=state.hubs.find(h=>h.id===allowedHubId);if(hub)hub.lastContactAt=this.now();
+      return {accepted:true,caseId:item.caseId};
+    });
+  }
+  pendingQuestions(hubId){
+    return this.store.state.cases.filter(c=>!c.archived&&!c.internalSimulation&&c.hubId===hubId).flatMap(c=>(c.followupCommands||[]).filter(q=>q.status==='pending').map(q=>({id:q.id,caseId:c.caseId,text:q.text,action:q.action,createdAt:q.createdAt}))).slice(0,8);
+  }
   updates(hubId,after=0){
     const all=this.store.state.updates.filter(u=>u.hubId===hubId&&u.seq>after),updates=[];
     // Match the source hub's count and64KiB response bounds, including event history.
@@ -150,9 +211,9 @@ export class SupervisorCore {
       if(Buffer.byteLength(JSON.stringify({updates:[...updates,update],cursor:update.seq,more:true}))>48*1024){if(!updates.length)throw new Error('Update exceeds synchronization budget');break;}
       updates.push(update);
     }
-    return {updates,cursor:updates.length?updates.at(-1).seq:this.store.state.sequence,more:all.length>updates.length};
+    return {updates,cursor:updates.length?updates.at(-1).seq:this.store.state.sequence,more:all.length>updates.length,questions:this.pendingQuestions(hubId)};
   }
-  publicCase(item){const {seenEvents,...safe}=item;return structuredClone(safe);}
+  publicCase(item){const {seenEvents,followupCommands,...safe}=item;return structuredClone({...safe,canContactUser:item.canContactUser===true,followups:item.followups||[]});}
   state(){
     const s=this.store.state;return {product:'RescueMesh',serverTime:this.now(),automationPaused:s.automationPaused,cases:s.cases.filter(c=>!c.archived).map(c=>this.publicCase(c)).sort((a,b)=>(a.status==='needs-review'?-1:0)-(b.status==='needs-review'?-1:0)||a.request.severity-b.request.severity||b.updatedAt-a.updatedAt),events:structuredClone(s.events.slice(-300)),hubs:s.hubs.map(h=>({...h,resources:h.simulated?Object.fromEntries(Object.keys(s.resources[h.id]).map(resource=>[resource,available(s,h.id,resource)])):null})),simulation:structuredClone(s.simulation),model:this.planner.status(),database:this.store.mirror?.safeStatus()||{configured:false,connected:false,backend:'local-durable-spool'},realDispatch:false};
   }
