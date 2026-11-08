@@ -32,3 +32,9 @@ No explicit open-data license is stated in the source map metadata. Retain sourc
 The regional desk uses Leaflet1.9.4 (BSD-2-Clause, vendored reviewed assets) with the standard OpenStreetMap raster service at https://tile.openstreetmap.org/{z}/{x}/{y}. Public approximate ECSW, Plano, Garland and Addison hub landmarks anchor the view. The selected saved allocation supplies each handoff line; unallocated needs draw no handoff. These connections are resource exchanges, not driving routes or measured radio coverage.
 
 Map controls support pan, zoom, keyboard interaction and hub selection. Visible Leaflet/OpenStreetMap attribution is retained. The browser sends its public origin as Referer, caches ordinary viewed tiles, and performs no tile prefetch or offline downloads. Tile access needs Internet; the offline campus vector remains independent. Sources: https://leafletjs.com/examples/quick-start/ and https://operations.osmfoundation.org/policies/tiles/ .
+
+## Local request GPS map — November8 correction
+
+The local request Location panel now uses Leaflet1.9.4 and the same attributed OpenStreetMap street service as the regional map. Original phone WGS84 latitude/longitude place the magenta point directly; a meter-based circle reflects its reported accuracy. A recognized building is not required, and the map can pan/zoom outside UT Dallas. ECSW is a distinct gray receiving-hub reference, never a substitute report location.
+
+Without GPS, a recognized campus landmark may use its official WGS84 point with an approximate-landmark label. With neither GPS nor a known landmark, no report point is drawn. An operator-corrected landmark remains separate from original phone GPS. The Network view retains the offline campus PDF geometry; no GPS-to-PDF transform has been invented. Ordinary viewed street tiles require Internet and retain visible OpenStreetMap/Leaflet attribution, browser caching and origin Referer behavior.

@@ -37,7 +37,7 @@ test('local API requires auth, strict Host/Origin and CSRF; export is human-revi
   assert.equal((await fetch(`${origin}/api/incidents/${encodeURIComponent(id)}/review`, { method: 'POST', headers, body: '{}' })).status, 200);
   const exported = await (await fetch(`${origin}/api/incidents/${id}/export`, { method: 'POST', headers, body: '{}' })).json(); assert.equal(exported.servicesContacted, false); assert.equal(exported.simulation, true); assert.ok(exported.incident.request.note);
   const state = await (await fetch(`${origin}/api/state`, { headers: { Cookie: cookie } })).json(); assert.equal(state.incidents.length, 1); assert.equal(JSON.stringify(state).includes('keyHex'), false); assert.equal('receipt' in state.incidents[0], false);
-  const index = await fetch(origin); assert.match(index.headers.get('content-security-policy'), /frame-ancestors 'none'/); assert.equal(index.headers.get('referrer-policy'), 'no-referrer');
+  const index = await fetch(origin); assert.match(index.headers.get('content-security-policy'), /frame-ancestors 'none'/); assert.equal(index.headers.get('referrer-policy'), 'strict-origin-when-cross-origin');
   const selectionModule = await fetch(`${origin}/view-selection.js`); assert.equal(selectionModule.status, 200); assert.match(await selectionModule.text(), /export function selectVisibleReport/);
 });
 test('login rate limiting and oversized input are bounded', async t => {

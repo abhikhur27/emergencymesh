@@ -12,6 +12,12 @@ const staticFiles = new Map([
   ['/view-selection.js', ['view-selection.js', 'text/javascript; charset=utf-8']],
   ['/reception-data.js', ['reception-data.js', 'text/javascript; charset=utf-8']],
   ['/campus-map.js', ['campus-map.js', 'text/javascript; charset=utf-8']],
+  ['/location-map.js', ['location-map.js', 'text/javascript; charset=utf-8']],
+  ['/assets/leaflet-1.9.4/leaflet.js', ['assets/leaflet-1.9.4/leaflet.js', 'text/javascript; charset=utf-8']],
+  ['/assets/leaflet-1.9.4/leaflet.css', ['assets/leaflet-1.9.4/leaflet.css', 'text/css; charset=utf-8']],
+  ['/assets/leaflet-1.9.4/SOURCE.json', ['assets/leaflet-1.9.4/SOURCE.json', 'application/json; charset=utf-8']],
+  ['/assets/leaflet-1.9.4/LICENSE.txt', ['assets/leaflet-1.9.4/LICENSE.txt', 'text/plain; charset=utf-8']],
+  ...['layers-2x.png', 'layers.png', 'marker-icon-2x.png', 'marker-icon.png', 'marker-shadow.png'].map(name => [`/assets/leaflet-1.9.4/images/${name}`, [`assets/leaflet-1.9.4/images/${name}`, 'image/png']]),
   ['/ops-metrics.js', ['ops-metrics.js', 'text/javascript; charset=utf-8']],
   ['/assets/rescuemesh-wordmark.png', ['assets/rescuemesh-wordmark.png', 'image/png']],
   ['/assets/rescuemesh-mark.png', ['assets/rescuemesh-mark.png', 'image/png']],
@@ -39,8 +45,8 @@ export function createHubServer({ core, config, operatorToken, identities = new 
     response.setHeader('Cache-Control', 'no-store');
     response.setHeader('X-Content-Type-Options', 'nosniff');
     response.setHeader('X-Frame-Options', 'DENY');
-    response.setHeader('Referrer-Policy', 'no-referrer');
-    response.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+    response.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    response.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://tile.openstreetmap.org; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
     try {
       if (!expectedHost || request.headers.host !== expectedHost || !['127.0.0.1', '::ffff:127.0.0.1'].includes(request.socket.remoteAddress)) return send(response, 403, { error: 'Local host required' });
       const url = new URL(request.url, expectedOrigin);

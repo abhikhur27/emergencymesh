@@ -21,7 +21,9 @@ test('local entrypoint dependencies load before sign-in while API state remains 
   const html = await home.text();
   assert.match(html, /src="\/app\.js"/);
   assert.match(html, /href="\/style\.css"/);
-  for (const path of ['/app.js', '/campus-map.js', '/map-geometry.js', '/ops-metrics.js', '/reception-data.js', '/view-selection.js']) {
+  assert.match(html, /href="\/assets\/leaflet-1\.9\.4\/leaflet\.css"/);
+  assert.match(html, /src="\/assets\/leaflet-1\.9\.4\/leaflet\.js"/);
+  for (const path of ['/app.js', '/location-map.js', '/campus-map.js', '/map-geometry.js', '/ops-metrics.js', '/reception-data.js', '/view-selection.js', '/assets/leaflet-1.9.4/leaflet.js']) {
     const response = await fetch(origin + path);
     assert.equal(response.status, 200, path);
     assert.match(response.headers.get('content-type'), /javascript/, path);
@@ -33,7 +35,18 @@ test('local entrypoint dependencies load before sign-in while API state remains 
   const geometry = await fetch(origin + '/assets/campus-map.json');
   assert.equal(geometry.status, 200); assert.match(geometry.headers.get('content-type'), /json/);
   assert.equal(typeof await geometry.json(), 'object');
-  assert.equal(home.headers.get('referrer-policy'), 'no-referrer');
+  assert.equal(home.headers.get('referrer-policy'), 'strict-origin-when-cross-origin');
+  const csp = Object.fromEntries(home.headers.get('content-security-policy').split(';').map(value => value.trim().split(/\s+/)).filter(parts => parts[0]).map(([name, ...values]) => [name, values]));
+  assert.deepEqual(csp['script-src'], ["'self'"]);
+  assert.deepEqual(csp['connect-src'], ["'self'"]);
+  assert.deepEqual(csp['img-src'], ["'self'", 'data:', 'https://tile.openstreetmap.org']);
+  const css = await fetch(origin + '/assets/leaflet-1.9.4/leaflet.css'); assert.equal(css.status, 200); assert.match(css.headers.get('content-type'), /text\/css/);
+  for (const name of ['layers-2x.png', 'layers.png', 'marker-icon-2x.png', 'marker-icon.png', 'marker-shadow.png']) {
+    const response = await fetch(origin + '/assets/leaflet-1.9.4/images/' + name); assert.equal(response.status, 200); assert.equal(response.headers.get('content-type'), 'image/png');
+    assert.deepEqual([...new Uint8Array(await response.arrayBuffer()).slice(0, 8)], [137, 80, 78, 71, 13, 10, 26, 10]);
+  }
+  assert.equal((await fetch(origin + '/assets/leaflet-1.9.4/LICENSE.txt')).status, 200);
+  assert.equal((await fetch(origin + '/assets/leaflet-1.9.4/SOURCE.json')).status, 200);
   assert.match(home.headers.get('content-security-policy'), /script-src 'self'/);
   assert.match(home.headers.get('content-security-policy'), /frame-ancestors 'none'/);
   assert.equal((await fetch(origin + '/api/state')).status, 401);

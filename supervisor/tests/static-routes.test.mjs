@@ -29,7 +29,7 @@ test('regional entrypoint modules and locally vendored Leaflet dependencies are 
   assert.match(html, /src="\/app\.js"/);
   assert.match(html, /href="\/assets\/leaflet-1\.9\.4\/leaflet\.css"/);
   assert.match(html, /src="\/assets\/leaflet-1\.9\.4\/leaflet\.js"/);
-  for (const path of ['/app.js', '/interface.js', '/ui-kit.js', '/assets/leaflet-1.9.4/leaflet.js']) {
+  for (const path of ['/app.js', '/interface.js', '/ui-kit.js', '/agent-conversation.js', '/assets/leaflet-1.9.4/leaflet.js']) {
     const response = await fetch(origin + path);
     assert.equal(response.status, 200, path);
     assert.match(response.headers.get('content-type'), /javascript/, path);

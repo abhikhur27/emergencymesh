@@ -44,7 +44,6 @@ export const RelayScene = () => {
   return <AbsoluteFill style={{background: dark, fontFamily: TYPE}}><Brand />
     <h1 style={{position: 'absolute', left: 140, top: 160, margin: 0, fontSize: 88, fontWeight: 650, lineHeight: 1.06, color: 'white', letterSpacing: -3}}>A nearby radio.<br />Then the next.</h1>
     <MeshDiagram frame={frame} />
-    <div style={{position: 'absolute', left: 140, bottom: 79, fontSize: 23, color: '#9999a7'}}>Illustrated mesh path · three radio links</div>
   </AbsoluteFill>;
 };
 
@@ -60,7 +59,6 @@ export const AcknowledgmentScene = () => {
         <Icon name="lock" size={37} style={{color: '#ff55a4'}} /><span style={{fontSize: 45, fontWeight: 550}}>Hub receipt confirmed</span>
         <div style={{position: 'absolute', top: -100, bottom: -100, left: -450, width: 370, background: 'linear-gradient(105deg,transparent,rgba(255,255,255,.14),transparent)', translate: `${interpolate(frame, [9, 35], [0, 1900], cap)}px 0`, rotate: '-7deg'}} />
       </div>
-      <div style={{marginTop: 30, fontSize: 28, color: '#aaaab8'}}>Saved before agent processing.</div>
     </div>
   </AbsoluteFill>;
 };
@@ -75,8 +73,6 @@ export const ProductScene = () => {
       <Img src={staticFile('brand/rescuemesh-wordmark.png')} style={{width: 590, height: 'auto'}} />
       <h1 style={{fontSize: 57, lineHeight: 1.12, letterSpacing: -1.7, fontWeight: 560, margin: '43px 0 0'}}>A connection<br />when it matters.</h1>
       <div style={{height: 4, width: 78, borderRadius: 3, background: MAGENTA, marginTop: 37}} />
-      <div style={{fontSize: 25, color: '#6c6c76', marginTop: 30}}>Phone. Radio. People.</div>
     </div>
-    <div style={{position: 'absolute', left: 140, bottom: 68, fontSize: 19, color: '#85858f'}}>Prototype demonstration · a hub receipt is not responder dispatch</div>
   </AbsoluteFill>;
 };

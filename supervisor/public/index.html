@@ -16,7 +16,7 @@
   <div id="application" hidden>
     <header class="app-chrome">
       <div class="brand-row"><a href="/" aria-label="RescueMesh regional desk"><img src="/assets/rescuemesh-wordmark.png" width="151" height="29" alt="RescueMesh"></a><div class="desk-context"><strong>Regional desk</strong><span>North Texas</span></div><div class="operator-toolbar"><span id="connection" class="connection">Connecting</span><button id="signout" class="button quiet" type="button">Sign out</button></div></div>
-      <div class="navigation-row"><nav class="desk-nav" aria-label="Regional desk views"><button type="button" data-tab="handoffs" aria-current="page">Requests</button><button type="button" data-tab="hubs">Hubs</button><button type="button" data-tab="history">Activity</button><button type="button" data-tab="simulation">Exercise</button></nav><div class="automation"><span id="automation-status">Coordination active</span><button id="pause" class="button quiet" type="button">Pause coordination</button></div></div>
+      <div class="navigation-row"><nav class="desk-nav" aria-label="Regional desk views"><button type="button" data-tab="handoffs" aria-current="page">Requests</button><button type="button" data-tab="conversation">Conversation</button><button type="button" data-tab="hubs">Hubs</button><button type="button" data-tab="history">Activity</button><button type="button" data-tab="simulation">Exercise</button></nav><div class="automation"><span id="automation-status">Coordination active</span><button id="pause" class="button quiet" type="button">Pause coordination</button></div></div>
     </header>
     <main id="workspace" class="study-main regional-main" tabindex="-1">
       <section id="handoffs-panel" class="view-panel">
@@ -29,6 +29,13 @@
             <div class="regional-queue-context"><p id="request-count" class="caption regional-list-count"></p><button id="clear-filters" class="button quiet" type="button" hidden>Clear filters</button></div><div id="case-list" class="regional-case-list"></div><button id="more-requests" class="button secondary more-requests" type="button" hidden>Show more requests</button>
           </aside>
           <div id="case-detail" class="regional-selected" aria-label="Selected regional request"></div>
+        </div>
+      </section>
+      <section id="conversation-panel" class="view-panel" hidden>
+        <div class="regional-intro"><div><h1>Agent conversation</h1><p class="muted">Requests, resource replies and decisions between hubs.</p></div></div>
+        <div class="agent-conversation-layout">
+          <aside class="panel agent-channels-panel" aria-label="Conversation channels"><h2>Hubs</h2><nav id="conversation-channels" aria-label="Filter agent conversation"></nav><details class="agent-conversation-about"><summary>About these messages</summary><p>Concise summaries come from saved requests, tool calls and decisions. Town inventory replies are recorded snapshots. The town exercise hubs share the regional model.</p></details></aside>
+          <section class="panel agent-conversation-panel" aria-labelledby="conversation-title"><header class="agent-conversation-heading"><div><h2 id="conversation-title">All hub exchanges</h2><p id="conversation-scope" class="muted"></p></div><button id="conversation-clear-case" class="button secondary" type="button" hidden>All requests</button></header><div id="agent-conversation-scroll" class="agent-conversation-scroll" tabindex="0" aria-label="Saved agent messages"><button id="conversation-older" class="button secondary" type="button" hidden>Show earlier messages</button><ol id="agent-conversation-list" class="agent-conversation-list"></ol></div><button id="conversation-latest" class="button primary agent-conversation-latest" type="button" hidden>Show new messages</button></section>
         </div>
       </section>
       <section id="hubs-panel" class="view-panel" hidden><div class="regional-intro"><div><h1>Hubs</h1><p class="muted">Available resources, after saved reservations.</p></div></div><div id="hub-list"></div></section>

@@ -1,4 +1,5 @@
 import { regionalMetrics, allocationsFor, needsFor, supplySelections, RESOURCE_LABELS, CATEGORY_LABELS, resourceUnit, timestamp } from './ops-metrics.js';
+import { agentMessages, filterAgentMessages, AGENT_NAMES, AGENT_CHANNELS } from './agent-conversation.js';
 
 export async function startInterface({ HUB_LOCATIONS, selectedFlow, selectedFlows }) {
   const R = window.RM, e = R.el, $ = selector => document.querySelector(selector);
@@ -19,6 +20,7 @@ export async function startInterface({ HUB_LOCATIONS, selectedFlow, selectedFlow
   const location = item => item.location?.label || (item.location?.kind === 'gps' && Number.isFinite(item.location.latitude) && Number.isFinite(item.location.longitude) ? `${item.location.latitude.toFixed(5)}, ${item.location.longitude.toFixed(5)}` : 'Location not supplied');
   let state = null, csrf = '', selectedId = null, selectedResource = null, source = 'all', statusFilter = 'all', severity = 'all', query = '', activeTab = 'handoffs', pageSize = 30, fetching = false, mutating = false, signature = '', detailSignature = '', noticeTimer;
   const alternateChoices = new Map(), questionDrafts = new Map();
+  let conversationChannel = 'all', conversationCaseId = null, conversationLimit = 60, conversationSignature = '', conversationShown = new Set(), conversationCases = new Set();
 
   function announce(text, error = false) {
     const node = $('#notice'); node.textContent = text; node.className = `notice${error ? ' error' : ''}`; node.hidden = false;
@@ -63,6 +65,7 @@ export async function startInterface({ HUB_LOCATIONS, selectedFlow, selectedFlow
     activeTab = tab;
     for (const button of document.querySelectorAll('[data-tab]')) { if (button.dataset.tab === tab) button.setAttribute('aria-current', 'page'); else button.removeAttribute('aria-current'); }
     for (const panel of document.querySelectorAll('.view-panel')) panel.hidden = panel.id !== `${tab}-panel`;
+    if (tab === 'conversation' && state) renderAgentConversation(true);
   }
   function visibleCases() {
     const needle = query.trim().toLowerCase();
@@ -81,7 +84,7 @@ export async function startInterface({ HUB_LOCATIONS, selectedFlow, selectedFlow
     $('#pause').textContent = state.automationPaused ? 'Resume coordination' : 'Pause coordination'; $('#automation-status').textContent = state.automationPaused ? 'Coordination paused' : 'Coordination active'; $('.automation').classList.toggle('paused', state.automationPaused);
     $('#display-scope').textContent = severity === 'all' ? 'North Texas' : `${priorities[severity]} reports`;
     $('#clear-filters').hidden = source === 'all' && statusFilter === 'all' && severity === 'all' && !query;
-    renderOperations(); renderCases(); renderDetail(); renderHubs(); renderHistory(); renderExercise(); renderSystem();
+    renderOperations(); renderCases(); renderDetail(); renderHubs(); renderHistory(); renderExercise(); renderSystem(); if (activeTab === 'conversation') renderAgentConversation();
   }
   function renderOperations() {
     const metrics = regionalMetrics(state), retained = state.cases.filter(item => !item.archived), node = $('#operations-overview');
@@ -185,8 +188,55 @@ export async function startInterface({ HUB_LOCATIONS, selectedFlow, selectedFlow
     const received = item.events?.find(event => event.action === 'case_received');
     panel.append(append(e('p', 'regional-delivery-state'), R.icon('check'), e('span', '', received ? `Source saved by regional desk · ${clock(received.at)}` : 'Source saved by regional desk')));
     if (item.sourceAgent?.source === 'signal') panel.append(e('p', 'caption production-signal-mode', 'Typed signal used directly · no local inference needed'));
+    const conversation = R.button('Open agent conversation', 'secondary regional-conversation-link', () => openAgentConversation(item.caseId)); conversation.dataset.focusKey = `conversation-${item.caseId}`; panel.append(conversation);
     const details = e('details', 'regional-agent-log'); details.dataset.section = 'activity'; details.open = open.has('activity'); const summary = e('summary', '', `See ${item.events?.length || 0} saved agent steps`); summary.dataset.focusKey = `activity-${item.caseId}`; details.append(summary, timeline(item.events || []));
     panel.append(details); return panel;
+  }
+  function openAgentConversation(caseId = null) {
+    conversationCaseId = caseId; conversationChannel = 'all'; conversationLimit = 60; conversationSignature = ''; setTab('conversation');
+  }
+  function renderAgentConversation(force = false) {
+    const channels = $('#conversation-channels'), viewport = $('#agent-conversation-scroll'), list = $('#agent-conversation-list');
+    if (conversationCaseId && !state.cases.some(item => item.caseId === conversationCaseId)) { conversationCaseId = null; force = true; }
+    const selectedCase = state.cases.find(item => item.caseId === conversationCaseId), scope = conversationCaseId ? { ...state, cases: selectedCase ? [selectedCase] : [] } : state;
+    const all = agentMessages(scope), messages = filterAgentMessages(all, { channel: conversationChannel, caseId: conversationCaseId });
+    const visible = messages.slice(-conversationLimit), nextSignature = JSON.stringify(visible), currentCases = new Set(state.cases.map(item => item.caseId));
+    const removed = [...conversationCases].some(id => !currentCases.has(id));
+    const nearEnd = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 100;
+    const pending = messages.filter(message => !conversationShown.has(message.id)).length;
+    $('#conversation-title').textContent = conversationChannel === 'all' ? 'All hub exchanges' : AGENT_NAMES[conversationChannel];
+    $('#conversation-scope').textContent = selectedCase ? `${names[selectedCase.hubId]} · ${CATEGORY_LABELS[selectedCase.request.category] || 'Emergency'} · ${shortId(selectedCase)}` : 'Recent saved exchanges across requests';
+    $('#conversation-clear-case').hidden = !conversationCaseId;
+    $('#conversation-older').hidden = messages.length <= conversationLimit;
+    preserveFocus(() => {
+      channels.replaceChildren();
+      for (const channel of AGENT_CHANNELS) {
+        const count = filterAgentMessages(all, { channel }).length;
+        const button = R.button('', 'agent-channel' + (conversationChannel === channel ? ' is-selected' : ''), () => { conversationChannel = channel; conversationLimit = 60; conversationSignature = ''; renderAgentConversation(true); });
+        button.dataset.focusKey = `agent-channel-${channel}`; button.setAttribute('aria-pressed', String(conversationChannel === channel));
+        button.append(e('strong', '', channel === 'all' ? 'All hubs' : AGENT_NAMES[channel]), e('span', '', channel === 'all' ? `${count} saved messages` : channel === 'supervisor' ? 'Regional model and resource policy' : channel === 'ecsw' ? 'Physical radio hub' : 'Town exercise hub'));
+        channels.append(button);
+      }
+    });
+    if (nextSignature === conversationSignature) return;
+    if (!force && !removed && conversationSignature && !nearEnd) {
+      $('#conversation-latest').hidden = false; $('#conversation-latest').textContent = pending ? `Show ${pending} new ${pending === 1 ? 'message' : 'messages'}` : 'Refresh conversation'; return;
+    }
+    const previousTop = viewport.scrollTop;
+    preserveFocus(() => {
+      list.replaceChildren();
+      if (!visible.length) list.append(append(e('li', 'agent-empty'), e('h2', '', 'No saved exchanges yet'), e('p', 'muted', 'Requests and resource replies involving this hub will appear here.')));
+      for (const message of visible) {
+        const row = e('li', `agent-message-row${message.actor === 'supervisor' ? ' is-supervisor' : ''}`), bubble = e('article', 'agent-message'); bubble.dataset.messageId = message.id;
+        const actor = e('div', 'agent-message-actor'); actor.append(e('strong', '', AGENT_NAMES[message.actor]), e('span', '', message.recipients.length ? `to ${message.recipients.map(id => AGENT_NAMES[id]).join(', ')}` : ''));
+        const stamp = e('time', 'agent-message-time', clock(message.at)); stamp.dateTime = new Date(message.at).toISOString();
+        const head = append(e('header'), actor, stamp); bubble.append(head, e('div', 'agent-message-kind', message.kind), e('p', 'agent-message-text', message.text));
+        const foot = e('footer'); foot.append(e('span', 'agent-message-source', message.source));
+        const requestLink = R.button('Open request', 'quiet agent-request-link', () => { clearFilters(); selectCase(message.caseId, true); }); requestLink.dataset.focusKey = `message-request-${message.id}`; requestLink.setAttribute('aria-label', `Open request ${message.caseId}`); foot.append(requestLink); bubble.append(foot); row.append(bubble); list.append(row);
+      }
+    });
+    conversationSignature = nextSignature; conversationShown = new Set(messages.map(message => message.id)); conversationCases = new Set(visible.map(message => message.caseId)); $('#conversation-latest').hidden = true;
+    if (force || nearEnd) requestAnimationFrame(() => { viewport.scrollTop = viewport.scrollHeight; }); else viewport.scrollTop = previousTop;
   }
   function renderMap(item) {
     const panel = e('section', 'panel regional-map-panel'), flow = selectedResource ? selectedFlows(item).find(value => value.resource === selectedResource) || null : selectedFlow(item);
@@ -287,6 +337,13 @@ export async function startInterface({ HUB_LOCATIONS, selectedFlow, selectedFlow
   $('#signout').addEventListener('click', async () => { try { await request('/api/logout', { method: 'POST', body: {} }); questionDrafts.clear(); showLogin(); $('#password').focus(); } catch (error) { announce(error.message, true); } });
   $('#pause').addEventListener('click', event => change('/api/automation', { paused: !state.automationPaused }, state.automationPaused ? 'Automatic coordination resumed.' : 'Coordination paused. Requests remain saved.', event.currentTarget));
   for (const button of document.querySelectorAll('[data-tab]')) button.addEventListener('click', () => setTab(button.dataset.tab));
+  $('#conversation-clear-case').addEventListener('click', () => { conversationCaseId = null; conversationLimit = 60; conversationSignature = ''; renderAgentConversation(true); });
+  $('#conversation-latest').addEventListener('click', () => renderAgentConversation(true));
+  $('#conversation-older').addEventListener('click', () => {
+    const viewport = $('#agent-conversation-scroll'), oldHeight = viewport.scrollHeight, oldTop = viewport.scrollTop;
+    conversationLimit = Math.min(1200, conversationLimit + 60); conversationSignature = ''; renderAgentConversation(true);
+    requestAnimationFrame(() => { viewport.scrollTop = oldTop + viewport.scrollHeight - oldHeight; });
+  });
   $('#case-search').addEventListener('input', event => { query = event.target.value; pageSize = 30; render(); });
   $('#source-filter').addEventListener('change', event => setSource(event.target.value));
   $('#status-filter').addEventListener('change', event => { statusFilter = event.target.value; pageSize = 30; render(); });

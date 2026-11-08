@@ -6,7 +6,7 @@ import { OperatorAuth } from './auth.mjs';
 
 const publicRoot=fileURLToPath(new URL('../public/',import.meta.url));
 const staticFiles=new Map([['/',['index.html','text/html; charset=utf-8']],['/app.js',['app.js','text/javascript; charset=utf-8']],['/ops-metrics.js',['ops-metrics.js','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']],['/assets/rescuemesh-wordmark.png',['assets/rescuemesh-wordmark.png','image/png']],['/assets/rescuemesh-mark.png',['assets/rescuemesh-mark.png','image/png']],['/assets/rescuemesh-icon.png',['assets/rescuemesh-icon.png','image/png']]]);
-for(const name of ['interface.js','ui-kit.js'])staticFiles.set('/'+name,[name,'text/javascript; charset=utf-8']);
+for(const name of ['interface.js','ui-kit.js','agent-conversation.js'])staticFiles.set('/'+name,[name,'text/javascript; charset=utf-8']);
 for(const [name,type]of [['leaflet.js','text/javascript; charset=utf-8'],['leaflet.css','text/css; charset=utf-8'],['SOURCE.json','application/json; charset=utf-8'],['LICENSE.txt','text/plain; charset=utf-8'],...['layers-2x.png','layers.png','marker-icon-2x.png','marker-icon.png','marker-shadow.png'].map(name=>['images/'+name,'image/png'])])staticFiles.set('/assets/leaflet-1.9.4/'+name,['assets/leaflet-1.9.4/'+name,type]);
 const hash=value=>createHash('sha256').update(value).digest();
 function secretEqual(a,b){return typeof a==='string'&&typeof b==='string'&&timingSafeEqual(hash(a),hash(b));}

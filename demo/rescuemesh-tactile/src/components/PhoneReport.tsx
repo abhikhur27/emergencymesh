@@ -10,7 +10,7 @@ export const PhoneReport = ({globalFrame}: {globalFrame: number}) => {
   const buttonScale = released ? 1 + 0.02 * (1 - release) : press;
   const entrance = spring({frame: globalFrame, fps, config: TACTILE_SPRING});
   return (
-    <div style={{position: 'absolute', left: 270, top: 110, width: 500, height: 850, padding: 9, borderRadius: 52, background: '#24242b', boxShadow: '0 40px 80px #0006', scale: interpolate(entrance, [0, 1], [0.94, 1]), opacity: Math.min(1, entrance), fontFamily: TYPE}}>
+    <div style={{position: 'absolute', left: 270, top: 170, width: 500, height: 850, padding: 9, borderRadius: 52, background: '#24242b', boxShadow: '0 40px 80px #0006', scale: interpolate(entrance, [0, 1], [0.846, 0.9]), transformOrigin: 'top center', opacity: Math.min(1, entrance), fontFamily: TYPE}}>
       <div style={{height: '100%', background: '#f2f2f7', borderRadius: 43, overflow: 'hidden', color: '#17171b', position: 'relative'}}>
         <div style={{height: 72, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', borderBottom: '1px solid #e4e4ea'}}>
           <Img src={staticFile('brand/rescuemesh-wordmark.png')} style={{width: 244}} />
