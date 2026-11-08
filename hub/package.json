@@ -1,0 +1,16 @@
+{
+  "name": "emergencymesh-hub",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "node src/cli.mjs start",
+    "provision": "node src/cli.mjs provision",
+    "ports": "node src/cli.mjs ports",
+    "test": "node --test tests/*.test.mjs",
+    "check": "node scripts/check.mjs",
+    "verify:simulation": "node scripts/verify-simulation.mjs"
+  },
+  "dependencies": { "serialport": "13.0.0" }
+}

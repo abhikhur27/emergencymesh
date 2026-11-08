@@ -1,0 +1,89 @@
+import { createServer } from 'node:http';
+import { randomBytes, timingSafeEqual } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { injectSimulation } from './simulation.mjs';
+
+const staticFiles = new Map([
+  ['/', ['index.html', 'text/html; charset=utf-8']],
+  ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
+  ['/view-selection.js', ['view-selection.js', 'text/javascript; charset=utf-8']],
+  ['/style.css', ['style.css', 'text/css; charset=utf-8']],
+]);
+const publicDirectory = fileURLToPath(new URL('../public/', import.meta.url));
+function sameSecret(a, b) { return typeof a === 'string' && Buffer.byteLength(a) === Buffer.byteLength(b) && timingSafeEqual(Buffer.from(a), Buffer.from(b)); }
+function send(response, status, value, extra = {}) {
+  response.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', ...extra }); response.end(JSON.stringify(value));
+}
+async function jsonBody(request) {
+  if (request.headers['content-type']?.split(';')[0] !== 'application/json') throw Object.assign(new Error('JSON required'), { status: 415 });
+  let size = 0; const chunks = [];
+  for await (const chunk of request) { size += chunk.length; if (size > 4096) throw Object.assign(new Error('Request too large'), { status: 413 }); chunks.push(chunk); }
+  try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch { throw Object.assign(new Error('Invalid JSON'), { status: 400 }); }
+}
+
+export function createHubServer({ core, config, operatorToken, simulation = false, getLink = () => ({ mode: 'disconnected', connected: false }), ai = false, model = null } = {}) {
+  const sessions = new Map(); let loginAttempts = []; let mutations = []; let expectedHost = null; let expectedOrigin = null;
+  const server = createServer(async (request, response) => {
+    response.setHeader('Cache-Control', 'no-store');
+    response.setHeader('X-Content-Type-Options', 'nosniff');
+    response.setHeader('X-Frame-Options', 'DENY');
+    response.setHeader('Referrer-Policy', 'no-referrer');
+    response.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'");
+    try {
+      if (!expectedHost || request.headers.host !== expectedHost || !['127.0.0.1', '::ffff:127.0.0.1'].includes(request.socket.remoteAddress)) return send(response, 403, { error: 'Local host required' });
+      const url = new URL(request.url, expectedOrigin);
+      if (request.headers.origin && request.headers.origin !== expectedOrigin) return send(response, 403, { error: 'Origin rejected' });
+      if (request.method !== 'GET' && request.headers.origin !== expectedOrigin) return send(response, 403, { error: 'Same-origin request required' });
+      if (request.method === 'GET' && url.pathname === '/health') return send(response, 200, { ok: true, product: 'EmergencyMesh', simulation, realDispatch: false });
+      if (request.method === 'GET' && staticFiles.has(url.pathname)) {
+        const [file, type] = staticFiles.get(url.pathname);
+        response.writeHead(200, { 'Content-Type': type }); response.end(await readFile(`${publicDirectory}${file}`)); return;
+      }
+      const now = Date.now();
+      for (const [id, value] of sessions) if (value.expires < now) sessions.delete(id);
+      if (request.method === 'POST' && url.pathname === '/api/login') {
+        loginAttempts = loginAttempts.filter(time => time > now - 60000);
+        if (loginAttempts.length >= 10) return send(response, 429, { error: 'Wait one minute before trying again' });
+        loginAttempts.push(now);
+        const body = await jsonBody(request);
+        if (!sameSecret(body?.token, operatorToken)) return send(response, 401, { error: 'Access code rejected' });
+        if (sessions.size >= 16) sessions.delete(sessions.keys().next().value);
+        const id = randomBytes(32).toString('base64url'); const csrf = randomBytes(24).toString('base64url');
+        sessions.set(id, { csrf, expires: now + 8 * 60 * 60 * 1000 });
+        return send(response, 200, { ok: true, csrf }, { 'Set-Cookie': `em_session=${id}; HttpOnly; SameSite=Strict; Path=/; Max-Age=28800` });
+      }
+      const cookie = /(?:^|;\s*)em_session=([A-Za-z0-9_-]{43})(?:;|$)/.exec(request.headers.cookie || '')?.[1];
+      const session = sessions.get(cookie);
+      if (!session) return send(response, 401, { error: 'Operator sign-in required' });
+      if (request.method !== 'GET') {
+        if (!sameSecret(request.headers['x-csrf-token'], session.csrf)) return send(response, 403, { error: 'Session token required' });
+        mutations = mutations.filter(time => time > now - 60000);
+        if (mutations.length >= 120) return send(response, 429, { error: 'Operator request limit reached' });
+        mutations.push(now);
+      }
+      if (request.method === 'GET' && url.pathname === '/api/state') return send(response, 200, { csrf: session.csrf, region: config.region, keyId: config.keyId, incidents: core.list(), link: getLink(), simulation, ai: { enabled: ai, model }, realDispatch: false, serverTime: now });
+      if (request.method === 'POST' && url.pathname === '/api/logout') { sessions.delete(cookie); return send(response, 200, { ok: true }, { 'Set-Cookie': 'em_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0' }); }
+      if (request.method === 'POST' && url.pathname === '/api/simulate' && simulation) { await jsonBody(request); return send(response, 201, await injectSimulation(core, config)); }
+      const match = /^\/api\/incidents\/([0-9]+:[0-9]+:[0-9]+)\/(review|export)$/.exec(url.pathname);
+      if (request.method === 'POST' && match) {
+        await jsonBody(request);
+        if (match[2] === 'review') return send(response, 200, await core.review(match[1]));
+        return send(response, 200, core.export(match[1]));
+      }
+      return send(response, 404, { error: 'Not found' });
+    } catch (error) {
+      const known = error.message === 'Incident not found' || error.message === 'Operator review required before export';
+      send(response, error.status || (known ? 409 : 500), { error: known || error.status ? error.message : 'Operation failed; original report preserved' });
+    }
+  });
+  server.headersTimeout = 10000; server.requestTimeout = 10000; server.maxRequestsPerSocket = 200;
+  return {
+    server,
+    listen: (port = 4781) => new Promise((resolve, reject) => {
+      server.once('error', reject);
+      server.listen(port, '127.0.0.1', () => { const address = server.address(); expectedHost = `127.0.0.1:${address.port}`; expectedOrigin = `http://${expectedHost}`; resolve({ origin: expectedOrigin, port: address.port }); });
+    }),
+    close: () => new Promise(resolve => { server.closeIdleConnections(); server.close(() => resolve()); }),
+  };
+}

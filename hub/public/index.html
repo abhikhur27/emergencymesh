@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>EmergencyMesh · Demo dispatch</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script></head>
+<body>
+  <header><div class="wordmark"><span class="mark" aria-hidden="true">+</span> EmergencyMesh</div><div class="demo-label">DEMO DISPATCH · NO SERVICES CONNECTED</div><button id="logout" class="quiet" hidden>Sign out</button></header>
+  <main id="login-panel" class="login">
+    <span class="eyebrow">LOCAL OPERATOR CONSOLE</span><h1>Open the incident desk.</h1><p>Enter the access code saved in <code>.emergency/operator-token.txt</code> on the hub laptop.</p>
+    <form id="login-form"><label for="token">Operator access code</label><input id="token" type="password" autocomplete="off" spellcheck="false" required><button class="primary" type="submit">Open console</button></form>
+    <p class="muted">Access stays on this laptop. Reports are stored locally.</p>
+  </main>
+  <div id="workspace" hidden>
+    <section class="statusbar" aria-label="Hub connection"><span id="link">Disconnected</span><span id="region"></span><span id="model"></span><button id="simulate" class="quiet" hidden>Send test report</button></section>
+    <main class="desk">
+      <section class="queue" aria-labelledby="queue-heading"><div class="queue-title"><h1 id="queue-heading">Reports</h1><span id="count">0</span></div><label class="filter-label" for="filter">Show</label><select id="filter"><option value="all">All reports</option><option value="unreviewed">Awaiting review</option><option value="reviewed">Reviewed</option></select><div id="incident-list"></div></section>
+      <section id="detail" class="detail" aria-label="Selected report"><div class="empty"><span class="cross" aria-hidden="true">+</span><h2>Waiting for a report</h2><p>Authenticated requests appear here when the hub receives them.</p><p class="muted">A received report does not mean emergency services were contacted.</p></div></section>
+    </main>
+  </div>
+  <p id="error" class="error" role="alert" hidden></p><p id="notice" class="sr-only" aria-live="polite"></p>
+</body></html>

@@ -1,0 +1,42 @@
+{
+  "warning": "PUBLIC TEST KEY AND FIXED NONCES. Never use this profile for real data.",
+  "keyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "nonceHex": "000102030405060708090a0b",
+  "receiptNonceHex": "101112131415161718191a1b",
+  "requestEnvelope": {
+    "region": 1,
+    "keyId": 1,
+    "origin": 16909060,
+    "sequence": 42,
+    "hops": 3
+  },
+  "request": {
+    "category": 1,
+    "severity": 1,
+    "people": 2,
+    "flags": 1,
+    "createdAt": 1794000000,
+    "latitude": 32.9858,
+    "longitude": -96.7501,
+    "accuracy": 12,
+    "battery": 77,
+    "note": "Test request"
+  },
+  "requestFrameHex": "454d01010100040302012a0000000301000102030405060708090a0b4603d41a45a12c719914a58b4fb714928fd6ca38a41e2c08181580f4680c73c6059e7604d300f73522a5e55097c5d3ff",
+  "requestFrameBase64": "RU0BAQEABAMCASoAAAADAQABAgMEBQYHCAkKC0YD1BpFoSxxmRSli0+3FJKP1so4pB4sCBgVgPRoDHPGBZ52BNMA9zUipeVQl8XT/w==",
+  "receiptEnvelope": {
+    "region": 1,
+    "keyId": 1,
+    "origin": 84281096,
+    "sequence": 7,
+    "hops": 3
+  },
+  "receipt": {
+    "requestOrigin": 16909060,
+    "requestSequence": 42,
+    "status": 1,
+    "text": "Hub received"
+  },
+  "receiptFrameHex": "454d0102010008070605070000000301101112131415161718191a1b79fd9a1763c93ab3cb7940686d591b36b43527787ea6c6c2eb508a366942107a4603f51a454e",
+  "receiptFrameBase64": "RU0BAgEACAcGBQcAAAADARAREhMUFRYXGBkaG3n9mhdjyTqzy3lAaG1ZGza0NSd4fqbGwutQijZpQhB6RgP1GkVO"
+}

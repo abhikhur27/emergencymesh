@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.sh text eol=lf
+*.FCStd binary
+*.stl binary
+*.step binary
+*.png binary
+*.jpg binary
