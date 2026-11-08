@@ -1,5 +1,5 @@
 {
-  "checkedAt": "2026-11-08T12:21:47.5341587Z",
+  "checkedAt": "2026-11-08T12:41:04.3111057Z",
   "runtime": "official llama.cpp b5046",
   "archiveBytes": 74944281,
   "archiveSha256": "c19be78b5f00d8d29a25da41042cb7afa094cbf6280a225abe614b03b20029ab",
@@ -26,13 +26,28 @@
     "llama_vocab_is_eog"
   ],
   "swiftFilesReviewed": 9,
-  "nativeCompilationVerified": false,
-  "nativeSmokeExecuted": false,
+  "nativeCompilationVerified": true,
+  "nativeSmokeExecuted": true,
   "iPhonePerformanceVerified": false,
   "modelWeightsDownloadedByThisWorker": false,
   "authoredXCTestMethods": 4,
   "modelRevision": "91cad51170dc346986eccefdc2dd33a9da36ead9",
   "modelSha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
   "realChatApiUsed": false,
-  "radioUsed": false
+  "radioUsed": false,
+  "nativeReceipt": "https://github.com/abhikhur27/emergencymesh/actions/runs/42480891780",
+  "macOSSmoke": {
+    "chatAPIContacted": false,
+    "contextTokens": 2048,
+    "elapsedMs": 19854,
+    "maximumReplyTokens": 32,
+    "model": "Qwen2.5-1.5B-Instruct-Q4_K_M",
+    "modelSha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+    "nativeGeneration": true,
+    "platform": "macOS acceptance runner, not iPhone",
+    "radioContacted": false,
+    "reply": "For a storm forecast tomorrow, you can pack:\n1. A flashlight and extra batteries\n2. A first aid kit",
+    "replyCharacters": 99
+  },
+  "modelWeightsVerified": true
 }

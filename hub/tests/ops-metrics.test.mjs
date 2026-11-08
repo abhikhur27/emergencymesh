@@ -17,6 +17,15 @@ test('intake bins preserve real timestamps, include the window boundary and excl
   const sample = intakeHistogram([{ receivedAt: now - 3600000 }, { receivedAt: new Date(now - 1).toISOString() }, { receivedAt: now + 1 }, { receivedAt: now - 3600001 }, { receivedAt: null }], { now });
   assert.equal(sample.total, 2); assert.equal(sample.bins.length, 12); assert.equal(sample.bins[0].count, 1); assert.equal(sample.bins[11].count, 1);
 });
+test('legacy regional acknowledgments and returned sequence remain evidence without fabricating timestamps', () => {
+  const base = { receivedAt: now - 60000, request: { severity: 3, flags: 0 } };
+  const m = hubMetrics({ incidents: [
+    { ...base, id: 'legacy-return', coordination: { revision: 1, sharedRevision: 1, supervisorSeq: 12 } },
+    { ...base, id: 'ack-only', coordination: { revision: 1, sharedRevision: 1, supervisorSeq: 0 } },
+    { ...base, id: 'sent-only', coordination: { revision: 1, sharedRevision: 0, attempts: 1 } },
+  ] }, now);
+  assert.equal(m.acknowledged, 2); assert.equal(m.pending, 1); assert.equal(m.returned, 1); assert.equal(m.lastAck, null);
+});
 test('selected supplies use authenticated signal bits and never infer GPS from a landmark or invalid flag', () => {
   assert.deepEqual(supplySelections({ flags: 0xff }), ['food', 'water', 'medicine', 'power']);
   assert.deepEqual(supplySelections({ flags: 15 }), []); assert.deepEqual(supplySelections({ flags: -1 }), []); assert.deepEqual(supplySelections({ flags: 256 }), []);

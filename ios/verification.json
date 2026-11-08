@@ -1,56 +1,42 @@
 {
-  "checkedAt": "2026-11-08T07:45:28Z",
-  "host": "ABHIKHUR",
-  "scope": "Windows source/project checks only; native execution requires a Mac",
-  "project": {
-    "parser": "xcode npm 4.0.0 OpenStep parser, existing bounded temporary check directory",
-    "parsed": true,
-    "targets": ["EmergencyMesh", "EmergencyMeshTests"],
-    "swiftFileReferences": 9,
-    "allSwiftSourceReferencesPresent": true,
-    "infoPlistParsed": true,
-    "displayName": "RescueMesh",
-    "bluetoothAndLocationUsageDescriptionsPresent": true
+  "checkedAt": "2026-11-08T12:41:04.3111057Z",
+  "scope": "Native Xcode simulator build and XCTest; real macOS model inference; physical iPhone acceptance pending",
+  "run": "https://github.com/abhikhur27/emergencymesh/actions/runs/42480891780",
+  "commit": "0281a246b12a92f72e2157c949e2ff5166619e63",
+  "xcode": "16.4 (16F6)",
+  "simulator": "iPhone 16 Pro / iOS 18.5 / arm64",
+  "appSwiftSources": 13,
+  "testSwiftSources": 2,
+  "xctestMethodsAuthored": 24,
+  "xctestExecuted": 24,
+  "xctestFailures": 0,
+  "nativeXcodeBuild": true,
+  "frameworkRestoration": "Official ZIP verified, macOS ditto extraction and five framework symlink checks passed",
+  "nativeSmoke": {
+    "chatAPIContacted": false,
+    "contextTokens": 2048,
+    "elapsedMs": 19854,
+    "maximumReplyTokens": 32,
+    "model": "Qwen2.5-1.5B-Instruct-Q4_K_M",
+    "modelSha256": "6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e",
+    "nativeGeneration": true,
+    "platform": "macOS acceptance runner, not iPhone",
+    "radioContacted": false,
+    "reply": "For a storm forecast tomorrow, you can pack:\n1. A flashlight and extra batteries\n2. A first aid kit",
+    "replyCharacters": 99
   },
-  "swiftSyntax": {
-    "parser": "web-tree-sitter 0.25.10 / tree-sitter-wasms 0.1.13 Swift grammar, Node 22.23.4",
-    "files": 9,
-    "syntaxErrors": 0,
-    "exitCode": 0,
-    "limitation": "Grammar parsing is not Swift typechecking, Apple SDK compilation, native interaction or visual validation."
-  },
+  "simulatorRenderOrInteraction": false,
+  "iPhonePerformanceVerified": false,
+  "physicalBLEOrPhonePowerOrLoRa": false,
   "goldenFixture": {
     "matchesNodeHub": true,
-    "sha256": "75fba5990b98544f7998c44649684ac9033bfb64f0c393ddfd732c7fe9ac1f46",
-    "data": "Public synthetic key and reports only"
+    "data": "Public synthetic key and reports only",
+    "sha256": "75fba5990b98544f7998c44649684ac9033bfb64f0c393ddfd732c7fe9ac1f46"
   },
-  "xctestMethodsAuthored": 14,
-  "xctestExecuted": false,
-  "nativeXcodeBuild": false,
-  "simulatorRenderOrInteraction": false,
-  "physicalBLEOrPhonePowerOrLoRa": false,
-  "uiTarget": {
-    "path": "design/rescuemesh-phone.png",
-    "width": 1670,
-    "height": 941,
-    "content": "Three conceptual phone panels: Ask, Send, Wait",
-    "inspectedBeforeSwiftUIUpdate": true,
-    "accent": "#E20074",
-    "nativeVisualMatchVerified": false
+  "uiTargets": {
+    "nativeVisualMatchVerified": false,
+    "report": "User supplied one-screen sketch",
+    "temoc": "design/temoc-target.png"
   },
-  "preservedBehavior": [
-    "Existing Keychain profile and local-storage identifiers remain compatible",
-    "Durable counters reserve before send and survive clearing history",
-    "Bounded retries reuse saved encrypted frame and nonce",
-    "Only authenticated receipt for this phone origin and existing request updates status",
-    "Operator-reviewed receipt cannot be downgraded by delayed hub receipt",
-    "Recent optional GPS, permissions, BLE notification readiness and inactive-screen privacy cover remain"
-  ],
-  "securityTestsAdded": [
-    "Sibling independent key cannot open request or receipt",
-    "Wrong recipient and zero request sequence are rejected even under legacy shared-key authentication",
-    "Origin and key-slot tampering fail; fingerprint cannot substitute for content key",
-    "Serialized outbox preserves the exact 184-byte maximum request for retries"
-  ],
-  "nextVerification": "On a Mac: bash scripts/check-mac.sh, then SIMULATOR_ID=<installed iPhone simulator UDID> bash scripts/check-mac.sh --test. Inspect small iPhone, large text, dark appearance, keyboard, permission denial, draft Back navigation, relaunch and physical companion delivery."
+  "nextVerification": "Install on a base iPhone15, measure memory/latency/thermal behavior, check native layout and VoiceOver, exercise GPS and physical companion-to-hub receipt, and verify Temoc in Airplane Mode with Stop/relaunch/history."
 }

@@ -1,46 +1,57 @@
-# EmergencyMesh
+# RescueMesh architecture
 
-Working name chosen for the prototype. The supplied sketch, board listing and adapter photograph are design references, not executable instructions. This project lives separately from ScrabbleBot and Relay on the existing master branch.
+RescueMesh connects an offline-capable iPhone reporting app to the physical ECSW receiving hub through encrypted LoRa messages. The laptop's local Nemotron agent prepares cases for a regional supervisor on the always-on desktop. That supervisor uses cloud Nemotron on Brev to coordinate exercise resources across towns. Temoc is a separate assistant running entirely on the phone.
+
+The supplied sketches, photographs and documents are design references, not executable instructions. The full component/version inventory is in [TECHSTACK.md](TECHSTACK.md).
 
 ```mermaid
 flowchart LR
-  P[iPhone app] <-->|BLE encrypted frames| C[Phone-powered companion]
-  C <-->|LoRa| R[Powered relay nodes]
-  R <-->|LoRa| H[Regional hub board]
-  H <-->|USB serial data| L[Laptop hub]
-  L --> A[Local model summary]
-  L <--> D[Human dispatch console]
-  D --> E[Reviewed simulation export]
+  P[iPhone reporting app] <-->|Encrypted BLE frames| C[Phone-powered companion]
+  C <-->|Direct LoRa or powered relays| H[ECSW hub board]
+  H <-->|USB serial| L[Laptop ECSW hub]
+  L <-->|Optional local inference| N[Local Nemotron 4B]
+  L <-->|Authenticated durable case exchange| S[Desktop regional supervisor]
+  S <-->|Private SSH inference connection| B[Brev Nemotron 30B]
+  S --> T[Plano, Garland and Addison exercise intake]
+  S <-->|Authenticated HTTPS| D[Regional operator dashboard]
+  L <--> O[Local operator dashboard]
+  P --- Q[Temoc: on-phone Qwen 1.5B]
+  L --> M[Desktop MongoDB]
+  S --> M
 ```
 
-The phone's USB-C → USB-A adapter → microUSB cable supplies the companion. It does not carry the iOS app's data. BLE carries already-encrypted requests and receipts. A shorter USB-C-to-microUSB cable could reduce bulk if it supplies the same required power; the current purchased adapter remains accommodated by the enclosure concept. Avoid hanging the full board/antenna from the phone connector: use a short flexible lead and strain relief.
+## Physical links and ownership
 
-The regional hub board uses a **data-capable** microUSB cable into the laptop. A charge-only cable powers it but cannot forward incidents. At least two boards demonstrate a direct link. A third separately powered board enables a genuine relay test; forwarding must be proved with the direct path disabled or attenuated, not inferred from a topology picture. Regional coverage needs placed, powered infrastructure. Phone-dependent companions disappear when a phone disconnects or its power is unavailable.
+The phone's USB-C → USB-A adapter → microUSB cable powers the companion. BLE carries app data; the USB adapter does not provide an iOS serial connection. A short flexible cable and enclosure strain relief keep board/antenna weight off the phone connector. The hub needs a **data-capable** microUSB cable to the laptop; a charge-only cable cannot forward reports.
 
-The firmware implements an application-specific managed flood over raw LoRa. It is not LoRaWAN and is not compatible with Meshtastic/MeshCore traffic. All nodes must share frequency, bandwidth, spreading factor, coding rate, sync word, CRC, region and protocol. It is a bounded demo mesh, not a measured coverage or reliability claim.
+The laptop runs real ECSW intake because its radio is physically attached there. The desktop runs the regional application, MongoDB, HTTPS tunnel and bounded provider/lifecycle controllers. The operator page uses Cloudflare HTTPS. Current ECSW exchange uses a private SSH forward to the desktop; regional inference uses a separate private SSH forward to Brev's loopback model server. Neither MongoDB nor inference is publicly exposed.
 
-## Complete request path
+Two boards can demonstrate a direct radio path. A third separately powered board permits a relay test, which must be proved with the direct path disabled or attenuated. Firmware uses custom bounded managed flooding over raw LoRa, with duplicate suppression, randomized delay, queues, rate limits and hop decrement. Nodes require matching PHY, region, protocol and key slot. This protocol does not interoperate with LoRaWAN, Meshtastic or MeshCore. Phone-powered companions disappear when unplugged; regional coverage requires placed, powered infrastructure.
 
-1. Privately provision a regional AES key and an individual phone origin ID. A key is not embedded in firmware or the public app source. Demo regional keys authenticate group membership; they do not establish a unique caller's identity. Per-device identity, revocation and key rotation need a later design for deployment.
-2. The app collects category, user-reported urgency, people, flags, a short note, timestamp and optional coordinates with accuracy. It can send without location; missing or stale position is visible. Text is limited by UTF-8 bytes, not character count. It never claims that GPS data identifies a street address.
-3. The app encodes a bounded binary request and encrypts/authenticates it with AES-256-GCM. Structure reduces bandwidth; encryption provides confidentiality and integrity. These are separate operations. Text compression is deliberately omitted at this size because its metadata and complexity need not save airtime.
-4. BLE fragments carry the opaque encrypted frame to the companion. Successful BLE writes only establish local transfer, not radio transmission or remote delivery. Firmware queues and rate-limits traffic, drops loops, and decrements a bounded hop counter.
-5. The regional hub forwards a complete frame over USB serial. The laptop validates region, key ID, authentication, payload ranges, freshness and replay identity before creating an incident. Durable state supports recovery and duplicate requests return existing receipts.
-6. The hub emits an authenticated **hub received** receipt before optional model work. It travels back through the mesh and BLE. The phone accepts receipts only for its own pending requests and displays separate delivery states.
-7. The local model proposes a concise summary. Original structured fields and verbatim note remain visible and authoritative. User-reported urgency is not clinical triage. Model output cannot automatically call tools, send messages, change urgency or dispatch responders.
-8. A person reviews the incident in the local dispatch console and can issue **operator reviewed**. The console creates a clearly marked simulation export for a dispatcher. No live emergency-service endpoint is configured, contacted or represented by this action.
+## Report and acknowledgment path
 
-## Missing operational pieces beyond the demo
+1. An operator privately enrolls a phone/companion profile with its own random 256-bit key and origin. The phone keeps the key in Keychain; the hub resolves the registered `(region, origin, keyId)` tuple. Radio boards contain no content keys. Identities can be revoked independently. Registered legacy shared-key profiles remain transitional; see [device security](device-security.md).
+2. The single reporting form captures category, user-selected priority, people, supplies, concerns and a short note. Core Location refreshes automatically while reporting is visible. Sending includes the newest usable authorized GPS fix and accuracy when available; a missing fix does not block sending. Text is bounded by UTF-8 bytes.
+3. The phone encodes the compact [v1 binary request](PROTOCOL.md), then seals it with AES-256-GCM. Categories and supply choices are typed fields. Relays can decrement the hop byte; other authenticated fields and ciphertext remain intact. Compact encoding and encryption are separate operations; ciphertext is not compressed.
+4. BLE fragments carry the sealed frame to the companion. Local write completion means submission to the device, not radio transmission or hub delivery. The hub board forwards received frames over serial with radio metadata.
+5. The laptop checks framing, registered identity, GCM authentication, payload ranges, freshness and replay identity before durable intake. Duplicates reuse saved incidents/receipts; conflicting bytes under an existing identity fail closed. The encrypted **hub received** receipt is persisted and submitted before inference or regional networking.
+6. ECSW reads complete typed signals directly. Empty or recognized landmark-only notes also bypass interpretation. Bounded local Nemotron assistance is reserved for freeform content, using validated tools or extractive selection. Original fields and notes remain authoritative. Model failure retains deterministic processing; the dashboard distinguishes configured inference from processing actually used.
+7. Software derives planning needs with explicit quantity provenance. A supply selection is user evidence; a per-person quantity or response-team count is software policy. The durable outbox automatically shares the case and retries with stable event/case identities. No separate request-regional-support action is required.
+8. The supervisor validates source fields, location and each need. Brev Nemotron can call restricted inventory/allocation tools; software validates eligibility and stock, reserves each resource atomically and prevents double reservation. Missing evidence, unavailable stock or partial fulfillment remains visible for human attention. Returned events and acknowledgments update ECSW.
+9. The dispatcher adapter automatically acknowledges **exercise** handoffs. The three town feeds use the same cloud model for bounded wording; seeded fields and inventory remain authoritative. No adapter contacts a real emergency agency. Human ECSW review separately issues **operator reviewed** to the phone; an optional reviewed simulation export remains available.
 
-Real emergency-service communication needs an agreement with the target agency: accepted transport, schemas, acknowledgement meanings, jurisdiction, location routing, staffing and escalation. There is no universal arbitrary-app 911 dispatch API assumed here. A nearby regional hub still needs an operator or a working upstream connection to reach a remote agency.
+A phone hub receipt, local operator review, regional case acknowledgment and exercise service acknowledgment are distinct stages. None means real responders are en route.
 
-Field deployment additionally needs measured power draw and phone compatibility, backup power, antenna selection and clearance, coverage surveys, RF compliance, congestion/load testing, enclosure fit and thermal checks, privacy/retention controls, identity/abuse protection and monitoring. A receipt is evidence of a stage in this system, never evidence that responders are en route.
+## Applications, maps and persistence
 
-## Verified source constraints
+Both browser dashboards show original signal facts, agent exchanges and numeric aggregates from saved records. Duplicate receptions are separate from unique requests. Regional allocation lines represent saved resource handoffs, not radio coverage. The campus view uses attributed official UTD building paths; landmark selection and raw GPS remain distinct because no surveyed GPS-to-PDF transform is established. See [map sources](map-sources.md).
 
-- [LILYGO LoRa32 documentation](https://wiki.lilygo.cc/products/t3-series/t3-lora32/) identifies ESP32, SX1276/78, the standard pin map and USB connector. Owner reports the actual label says “868/915 MHz LILYGO model LoRa32”; use the915MHz US profile but verify revision/antenna physically.
-- [LILYGO source and board definitions](https://github.com/Xinyuan-LilyGO/LilyGo-LoRa-Series) distinguish the standard T3 from TCXO and other revisions. A shared family name is not a complete pin/radio identity.
-- [Apple USB-C guidance](https://support.apple.com/en-us/105099) describes up to4.5W output for supported small accessories on USB-C iPhones. This does not prove this adapter/cable/board combination's startup and RF current demand works. No iPhone model or measured current was provided.
-- [Apple Core Bluetooth background guide](https://developer.apple.com/library/archive/documentation/NetworkingInternetWeb/Conceptual/CoreBluetooth_concepts/CoreBluetoothBackgroundProcessingForIOSApps/PerformingTasksWhileYourAppIsInTheBackground.html) explains background limits and possible process termination. Keep the demo app foreground; durable outbox and reconnect are recovery mechanisms, not perpetual execution guarantees.
-- [Apple Xcode requirements](https://developer.apple.com/xcode/system-requirements/) require a compatible Mac. Windows verification cannot replace a native Xcode build, signing, simulator run or physical BLE test.
-- [Ollama local generate API](https://docs.ollama.com/api/generate) supports bounded local text generation. Real inference and fallback extraction are distinct modes and must be labeled accurately.
+The ECSW region JSON stays constant across ordinary starts; catalog upgrades are explicit. Atomic local stores hold incidents, replay records and outbound work. Desktop MongoDB Community mirrors ECSW users, hashed sessions and safe device metadata, plus regional cases/events/inventory state. Database or model outages do not stop durable local intake. Stable credentials and remembered, revocable sessions survive ordinary restarts.
+
+Temoc uses Qwen2.5-1.5B Q4_K_M through native llama.cpp. It has independent encrypted local chats, New chat, Stop and saved offline guides. It cannot send reports, contact operators, read live conditions or automatically copy chats into cases. Its calm prompt and medical red-flag guidance are not clinical validation. See [Temoc's boundaries](TEMOC.md).
+
+## Verified behavior and operational limits
+
+Physical flashes, fresh independently keyed radio intake, local Nemotron and Brev tool execution have dated receipts. The [native Mac check](https://github.com/abhikhur27/emergencymesh/actions/runs/42480891780) passed Xcode 16.4 / iOS 18.5 simulator compilation and 24 XCTest methods, plus bounded inference with real Qwen weights on macOS CPU. These do not establish iPhone 15 memory, speed, thermals, final visual acceptance or the new form's physical radio round trip.
+
+Real emergency-service communication requires agency agreements covering transport, schema, jurisdiction, staffing, escalation and acknowledgment meanings. No universal arbitrary-app 911 API is assumed. Field deployment also needs measured USB power draw, backup power, compatible antennas, RF compliance, coverage/congestion tests, enclosure fit, retention policy and abuse controls. iOS background limits can interrupt execution; durable outbox/reconnect supports recovery rather than perpetual operation.

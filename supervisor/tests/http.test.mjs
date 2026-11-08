@@ -34,5 +34,7 @@ test('machine events are scoped, durable and idempotent; cursor updates are cano
   assert.equal((await fetch(origin+'/api/hub/updates?after=-1',{headers})).status,400);
   const health=await (await fetch(origin+'/api/health')).json();assert.deepEqual(Object.keys(health).sort(),['ok','product','realDispatch','role']);
   const home=await fetch(origin+'/');assert.equal(home.status,200);assert.match(await home.text(),/id="workspace"/);assert.match(home.headers.get('content-security-policy'),/object-src 'none'/);
+  const metrics=await fetch(origin+'/ops-metrics.js');assert.equal(metrics.status,200);assert.match(metrics.headers.get('content-type'),/javascript/);assert.match(await metrics.text(),/export function regionalMetrics/);
+  const wordmark=await fetch(origin+'/assets/rescuemesh-wordmark.png');assert.equal(wordmark.status,200);assert.equal(wordmark.headers.get('content-type'),'image/png');assert.ok((await wordmark.arrayBuffer()).byteLength>100);
  }finally{await app.close();await f.cleanup();}
 });

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { OperatorAuth } from './auth.mjs';
 
 const publicRoot=fileURLToPath(new URL('../public/',import.meta.url));
-const staticFiles=new Map([['/',['index.html','text/html; charset=utf-8']],['/app.js',['app.js','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']]]);
+const staticFiles=new Map([['/',['index.html','text/html; charset=utf-8']],['/app.js',['app.js','text/javascript; charset=utf-8']],['/ops-metrics.js',['ops-metrics.js','text/javascript; charset=utf-8']],['/style.css',['style.css','text/css; charset=utf-8']],['/assets/rescuemesh-wordmark.png',['assets/rescuemesh-wordmark.png','image/png']],['/assets/rescuemesh-mark.png',['assets/rescuemesh-mark.png','image/png']],['/assets/rescuemesh-icon.png',['assets/rescuemesh-icon.png','image/png']]]);
 const hash=value=>createHash('sha256').update(value).digest();
 function secretEqual(a,b){return typeof a==='string'&&typeof b==='string'&&timingSafeEqual(hash(a),hash(b));}
 const fail=(message,status)=>Object.assign(new Error(message),{status});
