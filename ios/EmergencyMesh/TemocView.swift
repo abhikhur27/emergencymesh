@@ -188,7 +188,7 @@ private struct TemocModelSheet: View {
                         Button("Import model file") { importing = true }.frame(minHeight: 44)
                     }
                 } header: { Text("On-device model") } footer: {
-                    Text("The one-time model file is about 1.12 GB. The bundled handoff needs no model download. Verification checks the pinned official file before loading it. Chat text, GPS and phone keys are never sent with a model download.")
+                    Text("Download the model once over Wi-Fi (about 1.12 GB), then chat offline. Verification checks the pinned official file before loading it. Chat text, GPS and phone keys are never sent with a model download.")
                 }
                 Section {
                     Text("Temoc runs locally with a 2,048-token context and short replies. Older messages remain in history, but only recent context fits in each reply.")

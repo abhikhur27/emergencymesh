@@ -22,15 +22,15 @@ verify_file() {
 mode=checkout
 if [[ -f "$root/MANIFEST.json" ]]; then
   mode="$(plutil -extract packageMode raw -o - "$root/MANIFEST.json")"
-  case "$mode" in offline-bundled|source-only) ;; *) echo 'Unsupported handoff package mode.' >&2; exit 1 ;; esac
+  case "$mode" in offline-bundled|download-once|source-only) ;; *) echo 'Unsupported handoff package mode.' >&2; exit 1 ;; esac
 fi
 if [[ "$mode" == offline-bundled || -f "$model" ]]; then
   verify_file "$model" 1117320736 "$model_sha"
 else
-  echo 'Model not bundled. Use Temoc → Model → Download model over Wi-Fi or import the pinned GGUF on the iPhone.'
+  echo 'Model not bundled. Use Temoc → Set up → Download model over Wi-Fi or import the pinned GGUF on the iPhone.'
 fi
 
-if [[ "$mode" == offline-bundled || -f "$archive" ]]; then
+if [[ "$mode" == offline-bundled || "$mode" == download-once || -f "$archive" ]]; then
   verify_file "$archive" 74944281 "$archive_sha"
   stage="$(mktemp -d "$runtime/.prepare-XXXXXX")"
   trap 'rm -rf "$stage"' EXIT

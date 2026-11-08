@@ -2,18 +2,20 @@
 [CmdletBinding()]
 param(
     [string]$OutputPath = '',
-    [switch]$SourceOnly
+    [switch]$SourceOnly,
+    [switch]$BundleModel
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
+if ($SourceOnly -and $BundleModel) { throw 'SourceOnly and BundleModel are mutually exclusive.' }
 Add-Type -AssemblyName System.IO.Compression
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 $meshRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
 $iosRoot = [System.IO.Path]::GetFullPath((Join-Path $meshRoot 'ios'))
 if ([string]::IsNullOrWhiteSpace($OutputPath)) {
-    $filename = if ($SourceOnly) { 'RescueMesh-Mac-SourceOnly.zip' } else { 'RescueMesh-Mac.zip' }
+    $filename = if ($SourceOnly) { 'RescueMesh-Mac-SourceOnly.zip' } elseif ($BundleModel) { 'RescueMesh-Mac-Offline.zip' } else { 'RescueMesh-Mac.zip' }
     $OutputPath = Join-Path $meshRoot ('dist/' + $filename)
 }
 $OutputPath = [System.IO.Path]::GetFullPath($OutputPath)
@@ -73,7 +75,8 @@ $required = $appSources + $testSources + $runtimeSources + @(
     'design/temoc-target.png',
     'design/README.md'
 )
-if (-not $SourceOnly) { $required += @($modelPath, $runtimeArchivePath) }
+if ($BundleModel) { $required += $modelPath }
+if (-not $SourceOnly) { $required += $runtimeArchivePath }
 
 $entries = [System.Collections.Generic.List[object]]::new()
 $paths = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
@@ -136,14 +139,14 @@ if ($fixtureHash -ne $hubFixtureHash) { throw 'The iOS golden fixture differs fr
 $manifestFiles = @($entries | Sort-Object path | ForEach-Object {
     [ordered]@{ path = $_.path; bytes = (Get-Item -LiteralPath $_.source).Length; sha256 = (Get-FileHash -LiteralPath $_.source -Algorithm SHA256).Hash.ToLowerInvariant() }
 })
+$pins = @()
+if ($BundleModel) { $pins += @{ path = $modelPath; bytes = $modelBytes; sha256 = $modelHash } }
+if (-not $SourceOnly) { $pins += @{ path = $runtimeArchivePath; bytes = $runtimeArchiveBytes; sha256 = $runtimeArchiveHash } }
+foreach ($pin in $pins) {
+    $payload = @($manifestFiles | Where-Object { $_.path -ceq $pin.path })
+    if ($payload.Count -ne 1 -or $payload[0].bytes -ne $pin.bytes -or $payload[0].sha256 -cne $pin.sha256) { throw "Pinned dependency failed verification: $($pin.path)" }
+}
 if (-not $SourceOnly) {
-    foreach ($pin in @(
-        @{ path = $modelPath; bytes = $modelBytes; sha256 = $modelHash },
-        @{ path = $runtimeArchivePath; bytes = $runtimeArchiveBytes; sha256 = $runtimeArchiveHash }
-    )) {
-        $payload = @($manifestFiles | Where-Object { $_.path -ceq $pin.path })
-        if ($payload.Count -ne 1 -or $payload[0].bytes -ne $pin.bytes -or $payload[0].sha256 -cne $pin.sha256) { throw "Pinned dependency failed verification: $($pin.path)" }
-    }
     # Verify Unix symlink metadata before embedding the original official ZIP.
     $vendorZip = [System.IO.Compression.ZipFile]::OpenRead((Join-Path $iosRoot $runtimeArchivePath))
     try {
@@ -157,7 +160,7 @@ $manifest = [ordered]@{
     product = 'RescueMesh'
     format = 'unsigned Xcode source handoff'
     schema = 2
-    packageMode = $(if ($SourceOnly) { 'source-only' } else { 'offline-bundled' })
+    packageMode = $(if ($SourceOnly) { 'source-only' } elseif ($BundleModel) { 'offline-bundled' } else { 'download-once' })
     generatedAt = [DateTime]::UtcNow.ToString('o')
     payloadFiles = $manifestFiles.Count
     appSwiftFiles = $appSources.Count
@@ -166,7 +169,7 @@ $manifest = [ordered]@{
     nativeBuildExecutedByPackager = $false
     nativeReceiptPath = 'verification.json'
     fixtureIsPublicSynthetic = $true
-    model = [ordered]@{ bundled = -not $SourceOnly; path = $modelPath; bytes = $modelBytes; sha256 = $modelHash; revision = '91cad51170dc346986eccefdc2dd33a9da36ead9' }
+    model = [ordered]@{ bundled = [bool]$BundleModel; installation = $(if ($BundleModel) { 'bundled' } else { 'one-time in-app download or explicit import' }); path = $modelPath; bytes = $modelBytes; sha256 = $modelHash; revision = '91cad51170dc346986eccefdc2dd33a9da36ead9' }
     runtime = [ordered]@{ officialArchiveBundled = -not $SourceOnly; path = $runtimeArchivePath; bytes = $runtimeArchiveBytes; sha256 = $runtimeArchiveHash; preparation = 'bash scripts/prepare-mac.sh --open'; vendorTreeRepackedOnWindows = $false }
     files = $manifestFiles
 }
@@ -235,7 +238,7 @@ try {
     appSwiftFiles = $appSources.Count
     testSwiftFiles = $testSources.Count
     runtimeSwiftFiles = $runtimeSources.Count
-    modelBundled = -not $SourceOnly
+    modelBundled = [bool]$BundleModel
     officialRuntimeArchiveBundled = -not $SourceOnly
     validatedManifestReadBack = $true
     validatedPayloadHashes = $true
