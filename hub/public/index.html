@@ -25,7 +25,7 @@
     <details class="login-help"><summary>Access help</summary><p>Use the operator credential created on this laptop. The private access-code file is <code>.emergency/operator-token.txt</code>. A saved browser session can be revoked by signing out.</p></details>
   </main>
   <div id="workspace" hidden>
-    <section class="connection-strip" aria-label="Current connection"><span id="link">Checking radio connection</span><span id="connection-note"></span><button id="simulate" type="button" class="text-action" hidden>Send test report</button></section>
+    <section class="connection-strip" aria-label="Current intake"><div class="intake-context"><span id="link">Checking radio connection</span><span id="region-context">UT Dallas · ECSW</span><span id="connection-note"></span></div><p class="exercise-note"><strong>Exercise</strong> No emergency services are contacted</p><button id="simulate" type="button" class="text-action" hidden>Send test report</button></section>
     <main id="content" tabindex="-1">
       <section id="requests-view" class="view" aria-label="Local requests">
         <div class="local-desk"><div class="place-work">
@@ -43,7 +43,7 @@
       <section id="reception-view" class="view page-view" aria-label="Campus reception evidence" hidden></section>
       <section id="settings-view" class="view page-view" aria-label="Hub settings" hidden></section>
     </main>
-    <footer class="app-footer"><span>Emergency-service dispatch is simulated.</span><button id="logout" class="text-action" type="button">Sign out</button></footer>
+    <footer class="app-footer"><span>ECSW incident desk</span><button id="logout" class="text-action" type="button">Sign out</button></footer>
   </div>
   <dialog id="location-dialog" aria-labelledby="location-heading">
     <form id="location-form"><div class="dialog-head"><h2 id="location-heading">Correct the case location</h2><button id="close-location" type="button" class="text-action" aria-label="Close location correction">Close</button></div>

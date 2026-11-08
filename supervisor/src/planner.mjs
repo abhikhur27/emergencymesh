@@ -1,10 +1,11 @@
 const resourceSchema={type:'string',enum:['water','supplies','medical','fire','rescue','safety']};
 const TOOLS=[{type:'function',function:{name:'lookup_resources',description:'Read the available simulated resource inventory. Call this before proposing an allocation.',parameters:{type:'object',required:['resource'],additionalProperties:false,properties:{resource:resourceSchema}}}},{type:'function',function:{name:'propose_allocation',description:'Propose one eligible simulated town and exact required resource quantity, after reading lookup_resources.',parameters:{type:'object',required:['resource','townId','quantity'],additionalProperties:false,properties:{resource:resourceSchema,townId:{type:'string',enum:['plano','garland','addison']},quantity:{type:'integer',minimum:1,maximum:20}}}}}];
 export class NemotronPlanner {
-  constructor({enabled=true,model='nemotron-3-nano:4b',baseUrl='http://127.0.0.1:11434',timeoutMs=20000,fetchImpl=globalThis.fetch}={}){
+  constructor({enabled=true,model='nemotron-3-nano:4b',baseUrl='http://127.0.0.1:11434',provider='local',verifiedAt=null,timeoutMs=20000,fetchImpl=globalThis.fetch}={}){
     const parsed=new URL(baseUrl);if(!['http:','https:'].includes(parsed.protocol)||parsed.username||parsed.password)throw new Error('Invalid model endpoint');
     this.enabled=enabled;this.model=model;this.baseUrl=parsed.origin;this.timeoutMs=timeoutMs;this.fetch=fetchImpl;
-    this.health={enabled,model,hosting:['127.0.0.1','localhost','[::1]'].includes(parsed.hostname)?'local':'remote-configured',mode:enabled?'awaiting-inference':'rules',lastSuccessAt:null,lastError:null,lastLatencyMs:null,successfulToolCalls:0};
+    if(provider==='brev'&&(model!=='nemotron-3-nano:30b'||parsed.origin!=='http://127.0.0.1:11435'))throw new Error('Invalid private Brev provider configuration');
+    this.health={enabled,model,hosting:provider==='brev'?'brev':['127.0.0.1','localhost','[::1]'].includes(parsed.hostname)?'local':'remote-configured',transport:provider==='brev'?'private-ssh-forward':'configured-http',providerVerifiedAt:verifiedAt,mode:enabled?'awaiting-inference':'rules',lastSuccessAt:null,lastError:null,lastLatencyMs:null,successfulToolCalls:0};
   }
   async plan(item,need,catalog,onTool=async()=>{}){
     if(!this.enabled)return this.fallback(need,catalog,'Model assistance is disabled');
@@ -35,7 +36,7 @@ export class NemotronPlanner {
         throw new Error('tool-policy');
       }
       throw new Error('tool-limit');
-    }catch{this.health={...this.health,mode:'rules-fallback',lastError:'Local model/tool output unavailable or rejected',lastLatencyMs:Date.now()-started};return this.fallback(need,catalog,this.health.lastError);}
+    }catch{this.health={...this.health,mode:'rules-fallback',lastError:'Configured model/tool output unavailable or rejected; deterministic resource policy used',lastLatencyMs:Date.now()-started};return this.fallback(need,catalog,this.health.lastError);}
     finally{clearTimeout(timer);}
   }
   fallback(need,catalog,reason){

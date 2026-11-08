@@ -12,7 +12,7 @@ async function main(){
   await readEnvFile();const options=args(process.argv.slice(2)),directory=dataPath(options.data),settings=await provision(directory);
   if(options.command==='provision'){console.log(JSON.stringify({product:'RescueMesh',configuration:settings.configFile,operatorCredentialFile:settings.operatorFile,ecswMachineCredentialFile:settings.machineFile}));return;}
   const modelTimeout=options.command==='model-check'?Math.min(180000,Math.max(1000,Number(process.env.RESCUEMESH_MODEL_CHECK_TIMEOUT_MS)||150000)):Math.min(60000,Math.max(1000,Number(process.env.RESCUEMESH_MODEL_TIMEOUT_MS)||20000));
-  const planner=new NemotronPlanner({enabled:!options['no-model'],model:options.model||settings.model,baseUrl:settings.modelBase,timeoutMs:modelTimeout});
+  const planner=new NemotronPlanner({enabled:!options['no-model'],model:options.model||settings.model,baseUrl:settings.modelBase,provider:settings.modelProvider,verifiedAt:settings.modelVerifiedAt,timeoutMs:modelTimeout});
   if(options.command==='model-check'){
     const tools=[];const item={caseId:'model-check-synthetic',hubId:'ecsw',request:{category:5,severity:3,people:2},location:{kind:'landmark'}};const plan=await planner.plan(item,{resource:'water',quantity:2},[{townId:'plano',available:8},{townId:'garland',available:4},{townId:'addison',available:6}],async(action,arguments_,result)=>{tools.push({action,arguments:arguments_,result});});
     const receipt={at:new Date().toISOString(),synthetic:true,model:planner.status(),tools,plan,realServicesContacted:false};await writeFile(join(directory,'model-check.json'),JSON.stringify(receipt,null,2)+'\n',{mode:0o600});console.log(JSON.stringify(receipt));if(plan?.source!=='nemotron-tools')process.exitCode=2;return;

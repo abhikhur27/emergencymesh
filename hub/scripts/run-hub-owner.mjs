@@ -35,7 +35,7 @@ async function source() {
   const entries = [];
   for (const dir of ['src', 'public', 'tests', 'fixtures']) for (const file of await filesIn(join(hub, dir))) entries.push([file, join('hub', dir, file.slice(join(hub, dir).length + 1))]);
   for (const name of ['package.json', 'package-lock.json']) entries.push([join(hub, name), join('hub', name)]);
-  entries.push([join(hub, '..', 'regions', 'utd-ecsw.json'), join('regions', 'utd-ecsw.json')]);
+  for (const name of ['utd-ecsw.json', 'utd-campus-map.json']) entries.push([join(hub, '..', 'regions', name), join('regions', name)]);
   const hash = createHash('sha256'); const payload = [];
   for (const [file, relative] of entries) { const bytes = await readFile(file); hash.update(relative.replaceAll('\\','/')); hash.update('\0'); hash.update(bytes); payload.push({ relative, bytes }); }
   return { hash: hash.digest('hex'), payload };

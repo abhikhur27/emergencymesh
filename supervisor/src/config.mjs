@@ -3,6 +3,19 @@ import { resolve, join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 
 export const DEFAULT_MODEL = 'nemotron-3-nano:4b';
+export function inferenceSettings(config,env=process.env){
+  if(config.inference&&config.inference.provider!=='brev')throw new Error('Unsupported dedicated inference provider');
+  const dedicated=config.inference?.provider==='brev'?config.inference:null;
+  const provider=dedicated?'brev':env.RESCUEMESH_MODEL_PROVIDER||'local';
+  const model=dedicated?.model||env.OLLAMA_MODEL||config.model||DEFAULT_MODEL;
+  const modelBase=dedicated?.baseUrl||env.OLLAMA_HOST||'http://127.0.0.1:11434';
+  if(/cloud/i.test(model))throw new Error('Use downloaded model weights on the configured GPU, not an Ollama cloud tag');
+  const parsed=new URL(modelBase);
+  if(!['http:','https:'].includes(parsed.protocol)||parsed.username||parsed.password||parsed.pathname!=='/'||parsed.search||parsed.hash)throw new Error('Invalid inference endpoint');
+  if(!['local','brev'].includes(provider))throw new Error('Unsupported inference provider');
+  if(provider==='brev'&&(model!=='nemotron-3-nano:30b'||parsed.origin!=='http://127.0.0.1:11435'))throw new Error('Brev inference requires the private SSH forward and pinned30B model');
+  return {model,modelBase:parsed.origin,modelProvider:provider,modelVerifiedAt:dedicated?.verifiedAt||null};
+}
 export const dataPath = value => resolve(value || process.env.RESCUEMESH_SUPERVISOR_DATA || '.supervisor');
 export async function readEnvFile(file = '.env') {
   let text; try { text = await readFile(file, 'utf8'); } catch (error) { if (error.code === 'ENOENT') return; throw error; }
@@ -35,8 +48,6 @@ export async function provision(directory = dataPath()) {
   if (config.schema !== 1 || config.product !== 'RescueMesh') throw new Error('Unsupported supervisor configuration');
   const publicOrigin = process.env.RESCUEMESH_SUPERVISOR_PUBLIC_ORIGIN || config.publicOrigin || null;
   if (publicOrigin && new URL(publicOrigin).origin !== publicOrigin) throw new Error('Public origin must be an exact URL origin');
-  const model = process.env.OLLAMA_MODEL || config.model || DEFAULT_MODEL;
-  if (/cloud/i.test(model)) throw new Error('Cloud-tagged models are not local supervisor inference');
-  return { directory, config, operatorToken, hubTokens: { ecsw: machineToken }, operatorFile, machineFile, configFile, publicOrigin, model,
-    modelBase: process.env.OLLAMA_HOST || 'http://127.0.0.1:11434', mongoUri: process.env.MONGODB_URI || '', mongoDatabase: process.env.MONGODB_DATABASE || 'rescuemesh_supervisor' };
+  return { directory, config, operatorToken, hubTokens: { ecsw: machineToken }, operatorFile, machineFile, configFile, publicOrigin,...inferenceSettings(config),
+    mongoUri: process.env.MONGODB_URI || '', mongoDatabase: process.env.MONGODB_DATABASE || 'rescuemesh_supervisor' };
 }

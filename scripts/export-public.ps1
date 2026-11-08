@@ -14,9 +14,10 @@ $remote = (& git -C $destinationRoot config --get remote.origin.url).Trim()
 if ($LASTEXITCODE -ne 0 -or $remote -notmatch '^(https://github\.com/abhikhur27/emergencymesh(?:\.git)?|git@github\.com:abhikhur27/emergencymesh\.git)$') { throw 'Destination is not the expected RescueMesh public repository.' }
 
 $extensions = @('.md','.js','.mjs','.cjs','.json','.html','.css','.svg','.swift','.pbxproj','.xcscheme','.plist','.xcworkspacedata','.xcsettings','.h','.cpp','.ini','.ps1','.sh','.png','.jpg','.jpeg','.fcstd','.stl','.step','.stp','.3mf','.txt','.yml','.yaml')
-$blockedSegments = @('node_modules','.emergency','.supervisor','.pio','.native','.build','.git','.venv','DerivedData','xcuserdata','dist','runtime','logs','private','receipts','releases','artifacts')
+$blockedSegments = @('node_modules','.emergency','.supervisor','.private','.pio','.native','.build','.git','.venv','DerivedData','xcuserdata','dist','runtime','logs','private','receipts','releases','artifacts')
 $fixedFiles = @('README.md','firmware/README.md','firmware/platformio.ini','firmware/verification.json','hub/README.md','hub/DESIGN.md','hub/package.json','hub/package-lock.json','supervisor/README.md','supervisor/package.json','supervisor/package-lock.json','supervisor/.env.example')
-$publicDocs = @('ARCHITECTURE.md','PROTOCOL.md','DEMO.md','VERIFICATION.md','device-security.md','MAC-HANDOFF.md','cad-install.md','runtime-setup.md','OPERATING-20261108.md')
+$publicDocs = @('ARCHITECTURE.md','PROTOCOL.md','DEMO.md','VERIFICATION.md','device-security.md','MAC-HANDOFF.md','cad-install.md','runtime-setup.md','OPERATING-20261108.md','map-sources.md')
+$publicBrevSupport = @('check-brev-auth.sh','install-brev-cli.sh','install-brev-model.sh','run-brev-model.sh','brev-provider-plan.md')
 $publicHardware = @('README.md','cad-recipe.json','enclosure-preview.png','RescueMesh-enclosure.FCStd','RescueMesh-enclosure.step','BasePrint.stl','LidPrint.stl','AdapterPrint.stl')
 $currentDesign = @('RESCUEMESH.md','FULL-STORYBOARD.md','REFERENCES.md','CURRENT.json','design.tokens.json','rescuemesh-phone.png','rescuemesh-ecsw.png','rescuemesh-supervisor.png','rescuemesh-login.png','rescuemesh-oled.png')
 function Test-PublicPath([string]$Relative) {
@@ -30,6 +31,7 @@ function Test-PublicPath([string]$Relative) {
     if ($Relative -match '^(hub|supervisor)/(src|public|tests|fixtures|scripts)/') { return $true }
     if ($Relative -match '^(ios|integration|scripts)/') { return $true }
     if ($Relative -match '^deploy/[^/]+\.(ps1|mjs)$') { return $true }
+    if ($Relative -match '^deploy/([^/]+)$' -and $publicBrevSupport -contains $Matches[1]) { return $true }
     if ($Relative -match '^regions/[^/]+\.json$') { return $true }
     if ($Relative -match '^docs/([^/]+)$' -and $publicDocs -contains $Matches[1]) { return $true }
     if ($Relative -match '^hardware/([^/]+)$' -and $publicHardware -contains $Matches[1]) { return $true }

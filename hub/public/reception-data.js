@@ -13,6 +13,9 @@ export function landmarksFor(profile) {
 }
 function mentions(text, alias) {
   if (!alias) return false;
+  // BE is the official Berkner code, but also an ordinary English word.
+  // Accept the code as a standalone label or an explicit uppercase place phrase.
+  if (alias.toLowerCase() === 'be') return text.trim() === 'BE' || /(?:\b(?:at|near|by|outside|inside|building)\s+)BE\b/.test(text);
   const escaped = alias.replace(/[.*+?^$(){}|[\]\\]/g, '\\$&');
   return new RegExp('(?:^|[^a-z0-9])' + escaped + '(?:$|[^a-z0-9])', 'i').test(text);
 }
@@ -79,4 +82,8 @@ export function receptionSummary(incidents, profile) {
     last: latest.length ? new Date(Math.max(...latest)).toISOString() : null,
     rssi: signal(reports.map(item => item.radio?.rssi)), snr: signal(reports.map(item => item.radio?.snr))
   };
+}
+export function sortReports(incidents) {
+  const timestamp = value => typeof value === 'number' && Number.isFinite(value) ? value : Date.parse(value);
+  return [...incidents].sort((a, b) => (timestamp(b.receivedAt) || 0) - (timestamp(a.receivedAt) || 0));
 }

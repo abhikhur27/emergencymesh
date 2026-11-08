@@ -11,6 +11,10 @@ const staticFiles = new Map([
   ['/app.js', ['app.js', 'text/javascript; charset=utf-8']],
   ['/view-selection.js', ['view-selection.js', 'text/javascript; charset=utf-8']],
   ['/reception-data.js', ['reception-data.js', 'text/javascript; charset=utf-8']],
+  ['/campus-map.js', ['campus-map.js', 'text/javascript; charset=utf-8']],
+  ['/map-geometry.js', ['map-geometry.js', 'text/javascript; charset=utf-8']],
+  ['/assets/campus-map.json', ['assets/campus-map.json', 'application/json; charset=utf-8']],
+  ['/assets/campus-map.svg', ['assets/campus-map.svg', 'image/svg+xml']],
   ['/style.css', ['style.css', 'text/css; charset=utf-8']],
 ]);
 const publicDirectory = fileURLToPath(new URL('../public/', import.meta.url));

@@ -9,19 +9,348 @@
   "hubName": "ECSW",
   "timeZone": "America/Chicago",
   "frequencyMHz": 915,
-  "mapKind": "schematic",
-  "mapNotice": "Public landmarks for context. Typed locations are unverified; this is not a GPS survey, radio coverage map or relay route.",
-  "sources": ["https://calendar.utdallas.edu/ecsw", "https://services.utdallas.edu/download/Parking_Map.pdf"],
-  "landmarks": [
-    {"id":"ECSW","name":"Engineering and Computer Science West","shortName":"ECSW","aliases":["ecsw","engineering west","ecs west"],"mapX":65,"mapY":72},
-    {"id":"HH","name":"Karl Hoblitzelle Hall","shortName":"Hoblitzelle","aliases":["hoblitzelle","hoblitzelle hall","hh"],"mapX":35,"mapY":31},
-    {"id":"ECSN","name":"Engineering and Computer Science North","shortName":"ECSN","aliases":["ecsn","engineering north"],"mapX":65,"mapY":45},
-    {"id":"ECSS","name":"Engineering and Computer Science South","shortName":"ECSS","aliases":["ecss","engineering south"],"mapX":65,"mapY":61},
-    {"id":"FO","name":"Founders Building","shortName":"Founders","aliases":["founders","founders building"],"mapX":35,"mapY":12},
-    {"id":"MC","name":"Eugene McDermott Library","shortName":"Library","aliases":["mcdermott","mcdermott library","library"],"mapX":85,"mapY":46},
-    {"id":"SU","name":"Student Union","shortName":"Student Union","aliases":["student union","su"],"mapX":78,"mapY":59},
-    {"id":"PS4","name":"Parking Structure 4","shortName":"PS4","aliases":["parking structure 4","ps4"],"mapX":48,"mapY":73}
+  "mapKind": "official-pdf",
+  "mapNotice": "Building names and approximate label anchors come from the official campus PDF. Building points are not phone GPS, radio coverage, or relay routes. The UI uses the original PDF paths; normalized anchors exist only for compatibility.",
+  "sources": [
+    "https://calendar.utdallas.edu/ecsw",
+    "https://services.utdallas.edu/download/Parking_Map.pdf"
   ],
-  "resourceTypes": ["water", "supplies", "medical", "fire", "rescue", "safety"],
-  "resourceNotice": "Resource quantities and service dispatch in the regional demonstration are simulated. No real agency availability is asserted."
+  "landmarks": [
+    {
+      "id": "ECSW",
+      "name": "Engineering and Computer Science West",
+      "shortName": "ECSW",
+      "aliases": [
+        "ecsw",
+        "engineering west",
+        "ecs west",
+        "Engineering and Computer Science West"
+      ],
+      "mapX": 37.2651,
+      "mapY": 58.8302,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "ECSS",
+      "name": "Engineering and Computer Science South",
+      "shortName": "ECSS",
+      "aliases": [
+        "ecss",
+        "engineering south",
+        "ecs south",
+        "Engineering and Computer Science South"
+      ],
+      "mapX": 44.1143,
+      "mapY": 57.1793,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "ECSN",
+      "name": "Engineering and Computer Science North",
+      "shortName": "ECSN",
+      "aliases": [
+        "ecsn",
+        "engineering north",
+        "ecs north",
+        "Engineering and Computer Science North"
+      ],
+      "mapX": 44.2994,
+      "mapY": 53.4272,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "HH",
+      "name": "Karl Hoblitzelle Hall",
+      "shortName": "HH",
+      "aliases": [
+        "hh",
+        "hoblitzelle",
+        "hoblitzelle hall",
+        "Karl Hoblitzelle Hall"
+      ],
+      "mapX": 37.6354,
+      "mapY": 53.4272,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "FO",
+      "name": "Founders Building",
+      "shortName": "FO",
+      "aliases": [
+        "fo",
+        "founders",
+        "founders building"
+      ],
+      "mapX": 50.9635,
+      "mapY": 49.8252,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "MC",
+      "name": "Eugene McDermott Library",
+      "shortName": "MC",
+      "aliases": [
+        "mc",
+        "mcdermott",
+        "mcdermott library",
+        "library",
+        "Eugene McDermott Library"
+      ],
+      "mapX": 58.368,
+      "mapY": 53.5773,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "SU",
+      "name": "Student Union",
+      "shortName": "SU",
+      "aliases": [
+        "su",
+        "student union"
+      ],
+      "mapX": 52.2593,
+      "mapY": 53.8774,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "SUFC",
+      "name": "Student Union Food Court",
+      "shortName": "SUFC",
+      "aliases": [
+        "sufc",
+        "student union food court"
+      ],
+      "mapX": 49.2975,
+      "mapY": 54.6279,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "PS4",
+      "name": "Parking Structure 4",
+      "shortName": "PS4",
+      "aliases": [
+        "ps4",
+        "parking structure 4"
+      ],
+      "mapX": 30.2308,
+      "mapY": 58.0798,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "PS3",
+      "name": "Parking Structure 3",
+      "shortName": "PS3",
+      "aliases": [
+        "ps3",
+        "parking structure 3"
+      ],
+      "mapX": 44.2994,
+      "mapY": 37.3681,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "BE",
+      "name": "Lloyd V. Berkner Hall",
+      "shortName": "BE",
+      "aliases": [
+        "be",
+        "berkner",
+        "berkner hall",
+        "Lloyd V. Berkner Hall"
+      ],
+      "mapX": 43.559,
+      "mapY": 49.6751,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "SCI",
+      "name": "Sciences Building",
+      "shortName": "SCI",
+      "aliases": [
+        "sci",
+        "sciences",
+        "sciences building",
+        "science building"
+      ],
+      "mapX": 43.3739,
+      "mapY": 45.0224,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "SLC",
+      "name": "Science Learning Center",
+      "shortName": "SLC",
+      "aliases": [
+        "slc",
+        "science learning center"
+      ],
+      "mapX": 43.9292,
+      "mapY": 47.2737,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "FN",
+      "name": "Founders North",
+      "shortName": "FN",
+      "aliases": [
+        "fn",
+        "founders north"
+      ],
+      "mapX": 49.4826,
+      "mapY": 47.5739,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "JO",
+      "name": "Erik Jonsson Academic Center",
+      "shortName": "JO",
+      "aliases": [
+        "jo",
+        "jonsson",
+        "jonsson academic center",
+        "Erik Jonsson Academic Center"
+      ],
+      "mapX": 51.3337,
+      "mapY": 44.1219,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "GR",
+      "name": "Cecil H. Green Hall",
+      "shortName": "GR",
+      "aliases": [
+        "gr",
+        "green hall",
+        "cecil green hall",
+        "Cecil H. Green Hall"
+      ],
+      "mapX": 57.2574,
+      "mapY": 45.0224,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "EP",
+      "name": "Energy Plant",
+      "shortName": "EP",
+      "aliases": [
+        "ep",
+        "energy plant"
+      ],
+      "mapX": 39.6716,
+      "mapY": 45.3226,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "SSA",
+      "name": "Student Services Building Addition",
+      "shortName": "SSA",
+      "aliases": [
+        "ssa",
+        "student services addition",
+        "Student Services Building Addition"
+      ],
+      "mapX": 49.1124,
+      "mapY": 58.38,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "SSB",
+      "name": "Student Services Building",
+      "shortName": "SSB",
+      "aliases": [
+        "ssb",
+        "student services building"
+      ],
+      "mapX": 52.2593,
+      "mapY": 58.8302,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "ATC",
+      "name": "Edith O'Donnell Arts and Technology Building",
+      "shortName": "ATC",
+      "aliases": [
+        "atc",
+        "atec",
+        "arts and technology",
+        "Edith O'Donnell Arts and Technology Building"
+      ],
+      "mapX": 58.9234,
+      "mapY": 57.9297,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "DGA",
+      "name": "Davidson-Gundy Alumni Center",
+      "shortName": "DGA",
+      "aliases": [
+        "dga",
+        "davidson-gundy",
+        "alumni center",
+        "Davidson-Gundy Alumni Center"
+      ],
+      "mapX": 64.2917,
+      "mapY": 58.0798,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "JSOM",
+      "name": "Naveen Jindal School of Management",
+      "shortName": "JSOM",
+      "aliases": [
+        "jsom",
+        "jindal",
+        "school of management",
+        "Naveen Jindal School of Management"
+      ],
+      "mapX": 60.2192,
+      "mapY": 64.2333,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "AB",
+      "name": "Activity Center",
+      "shortName": "AB",
+      "aliases": [
+        "ab",
+        "activity center"
+      ],
+      "mapX": 47.2613,
+      "mapY": 62.8825,
+      "provenance": "official-pdf-label-anchor"
+    },
+    {
+      "id": "ACB",
+      "name": "Activity Center Bookstore",
+      "shortName": "ACB",
+      "aliases": [
+        "acb",
+        "activity center bookstore"
+      ],
+      "mapX": 47.8166,
+      "mapY": 65.7341,
+      "provenance": "official-pdf-label-anchor"
+    }
+  ],
+  "resourceTypes": [
+    "water",
+    "supplies",
+    "medical",
+    "fire",
+    "rescue",
+    "safety"
+  ],
+  "resourceNotice": "Resource quantities and service dispatch in the regional demonstration are simulated. No real agency availability is asserted.",
+  "landmarkCatalogVersion": 2,
+  "landmarkCatalog": {
+    "id": "utd-main-campus-buildings",
+    "version": 2,
+    "featureCount": 24,
+    "sourceSchema": "rescuemesh.campus-map.v1",
+    "sourceUrl": "https://services.utdallas.edu/download/Parking_Map.pdf",
+    "sourcePdfSha256": "17adc8be748d7063d12c6e0fb947647b5fa709d0a8ddb0e69a5e7b62b22ad9e0",
+    "projectionSha256": "4ffbea382f954897261322490a7746b4596b1b91e34bd5834d699990c326187f",
+    "coordinateSystem": "Normalized official PDF label anchors; compatibility only",
+    "phoneGpsTransformAvailable": false
+  }
 }

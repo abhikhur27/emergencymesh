@@ -1,5 +1,15 @@
 # RescueMesh runtime receipt
 
+## Update at 10:47 UTC, November 8
+
+The owner-approved temporary RescueMesh-only Read & Write API key is now installed privately on ABHIONEMILLION and authenticated by the pinned CLI. It expires at the end of November 10; no credential value is included here. The failed Hyperstack environment was deleted and authenticated inventory confirmed its absence at 10:36 UTC. This supersedes the pending-login observations below.
+
+The approved MassedCompute A6000 replacement was created at 10:40:23 UTC with 48 GB VRAM, 64 GB RAM and 256 GB storage, at $0.68/hour total. At 10:47 UTC it was still provisioning, so it was not yet a verified inference provider. The existing desktop model remains active until native tools and GPU execution are verified on Brev.
+
+The desktop's exact-instance guard is enabled and actually reached its guarding state under the scheduled-task identity. Its separate cleanup task is enabled, with next run November 10 at 05:00 UTC (November 9, 11 PM Central), correct runtime working directory and required files present. The plan includes a conservative $0.60 for the failed attempt, a $0.20 cleanup reserve and a $30 project cap; estimated maximum project usage through the deadline is $29.3823. This is a conservative rate estimate, not a provider billing receipt. No payment method or auto recharge was added.
+
+Both new interfaces are deployed. The campus map uses 24 original official UTD building footprints and 160 context paths, with distinct ECSW and ECSS geometry. Regional lines represent only the selected saved allocation, from supplier to requesting hub. Browser checks confirmed zoom, reset, hub filtering and expanded activity; a selected-building campus label issue is being corrected before final acceptance. See the dated interface receipt for source tests and map limitations.
+
 Verified on November 8, 2026. The laptop ECSW hub and desktop supervisor are separate applications. Only the laptop receives physical LoRa requests. Plano, Garland and Addison generate clearly labeled simulated intake; all service acknowledgments are simulated.
 
 ## Local model
@@ -47,10 +57,20 @@ Actual local and public checks passed: health200, anonymous operator state401, a
 
 Quick Tunnel hostnames can change after a connector restart and have no uptime guarantee. The runner updates its configured origin when that happens. The active URL and connector PID are recorded in `supervisor-public.json`; the task's remaining processes are in `supervisor-state.json`. The dashboard polls and does not depend on SSE.
 
+## Brev provider transition
+
+The owner now requires supervisor inference on a Brev GPU while the supervisor application remains on the desktop behind Cloudflare. The prepared connection is a private SSH forward from desktop `127.0.0.1:11435` to the GPU's loopback Ollama11434, using downloaded `nemotron-3-nano:30b` weights. ECSW inference remains on the laptop's local 4B model. Brev configuration explicitly identifies its hosting and transport; a failed link uses the visible deterministic catalog policy and never selects another LLM.
+
+Pinned official Brev CLI 0.6.337 was installed and checksum-verified in the desktop's existing Ubuntu24.04WSL2. No new distribution, Brev account or API key was created by the runtime agent. Normal NVIDIA device login is awaiting owner completion. A pasted ID JWT alone does not supply the refresh credential required for unattended cleanup. The CLI and authentication remain on the desktop.
+
+The isolated 30B installer, model controller, exact-instance lifecycle guard and Windows task installer are staged under `deploy/`. They require an approved exact instance identity and current authenticated inventory. The budget guard limits the resource to the earlier of its deadline or its approved credit budget, reserves $0.20 for cleanup delay, and deletes the disposable VM rather than attempting unsupported stop/start. A separate deadline task provides cleanup independently of the model connection. Neither a failed inventory request nor an authentication error is accepted as proof of deletion. The official pinned NVIDIA device-auth source describes a 24-hour session-key lifetime, shorter than the remaining demo period. Task installation therefore also requires verified cleanup authority lasting through the deletion time; a current login alone is insufficient. These Brev tasks are not claimed active until those conditions and the actual cloud instance are verified.
+
+Activation requires a recent successful synthetic two-tool application check, observed remote GPU memory, matching model digest, private SSH verification and enabled cleanup tasks. It updates persistent provider configuration and requests an application restart through the existing revision owner, preserving private data and the Cloudflare connector. A configured Brev provider takes precedence over the old local-model environment, preventing an implicit fallback to the desktop GPU.
+
 ## Evidence and remaining external setup
 
 Safe receipts are in `deploy/receipts/`: model benchmarks, provider checksums, Mongo verification, application model tools, HTTP/authentication and current task/process state. Source tests pass on both hosts, including continuous simulation, preservation of physical cases and reservations, scoped authentication, durable replay, and Mongo SIM retention.
 
-The existing Chrome Brev account is signed in, but a Terms of Service acceptance screen blocks access and the credit balance is unverified. The parent task has requested the owner's approval for those terms. No Brev machine was provisioned and no paid OpenAI API was used. The currently verified supervisor model runs on the desktop GPU. An Atlas URI and access to the Brev workspace with confirmed credits are still required to demonstrate those respective cloud tracks.
+The parent verified the signed-in Brev account, approved terms and $60 HackUTD credits with no payment method or auto recharge. The first approved Hyperstack A6000 attempt failed provisioning; it has no verified SSH/model provider. A MassedCompute A6000 replacement at the owner-approved$0.68/hour total and $30 cap is held pending refreshable CLI authentication. Its exact instance and automatic deletion must be verified before activation. The current verified supervisor model remains the desktop GPU until that handoff succeeds. No paid OpenAI API was used. An Atlas URI is still required for an Atlas demonstration; the running database is authenticated MongoDB Community.
 
 Official references: [Ollama model](https://ollama.com/library/nemotron-3-nano:4b), [NVIDIA GGUF model](https://huggingface.co/nvidia/NVIDIA-Nemotron-3-Nano-4B-GGUF), [native tool calling](https://docs.ollama.com/capabilities/tool-calling), [MongoDB Windows installation](https://www.mongodb.com/docs/manual/administration/install-community-windows/), [Cloudflare Quick Tunnels](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/), [official Node24 archive](https://nodejs.org/dist/v24.22.2/).

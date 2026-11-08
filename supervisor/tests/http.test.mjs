@@ -33,6 +33,6 @@ test('machine events are scoped, durable and idempotent; cursor updates are cano
   assert.equal((await fetch(origin+'/api/hub/cases',{method:'POST',headers,body:JSON.stringify({...input,hubId:'plano'})})).status,403);
   assert.equal((await fetch(origin+'/api/hub/updates?after=-1',{headers})).status,400);
   const health=await (await fetch(origin+'/api/health')).json();assert.deepEqual(Object.keys(health).sort(),['ok','product','realDispatch','role']);
-  const home=await fetch(origin+'/');assert.equal(home.status,200);assert.match(await home.text(),/Across the region/);assert.match(home.headers.get('content-security-policy'),/object-src 'none'/);
+  const home=await fetch(origin+'/');assert.equal(home.status,200);assert.match(await home.text(),/id="workspace"/);assert.match(home.headers.get('content-security-policy'),/object-src 'none'/);
  }finally{await app.close();await f.cleanup();}
 });
