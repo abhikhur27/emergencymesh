@@ -3,7 +3,7 @@ $project = Split-Path -Parent $PSScriptRoot
 $core = if ($env:PLATFORMIO_CORE_DIR) { $env:PLATFORMIO_CORE_DIR } else { Join-Path $env:USERPROFILE '.platformio' }
 $bootApp = Join-Path $core 'packages/framework-arduinoespressif32/tools/partitions/boot_app0.bin'
 if (-not (Test-Path -LiteralPath $bootApp)) { throw 'Build the firmware first: boot_app0.bin is missing.' }
-$sourcePaths = @('platformio.ini', 'include/mesh_protocol.h', 'include/device_identity.h', 'src/main.cpp')
+$sourcePaths = @('platformio.ini', 'include/mesh_protocol.h', 'include/device_identity.h', 'include/status_screen.h', 'src/main.cpp')
 $sources = @{}
 foreach ($relative in $sourcePaths) { $sources[$relative] = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $project $relative)).Hash.ToLowerInvariant() }
 foreach ($role in @('companion', 'relay', 'hub')) {
@@ -25,7 +25,7 @@ foreach ($role in @('companion', 'relay', 'hub')) {
     $checksums += "$hash  $name"
   }
   $manifest = [ordered]@{
-    formatVersion=1;role=$role;protocolVersion=1;firmwareRevision='companion-ble-v2';bleEnabled=($role -eq 'companion');board='LILYGO T3 LoRa32 V1.6.1 standard ESP32/SX1276';
+    formatVersion=1;role=$role;protocolVersion=1;firmwareRevision='rescuemesh-oled-v3';bleEnabled=($role -eq 'companion');board='LILYGO T3 LoRa32 V1.6.1 standard ESP32/SX1276';
     frequencyMHz=915;region=1;keyId=1;phy='SF7/BW125kHz/CR4-5/sync0x12/CRC/preamble8/10dBm';
     flashMode='dio';flashFrequency='40m';flashSize='4MB';platform='espressif32@6.13.0';
     exportedAtUtc=[DateTime]::UtcNow.ToString('o');physicalFlashVerified=$false;radioLinkVerified=$false;phonePowerVerified=$false;

@@ -51,8 +51,11 @@ enum WireCodec {
         let p = try open(frame, profile: profile, expectedType: 2)
         guard p.count >= 10, p[8] == 1 || p[8] == 2, p[9] <= 80, p.count == 10 + Int(p[9]),
               let text = String(data: p.dropFirst(10), encoding: .utf8) else { throw MeshError.invalid("Invalid receipt payload.") }
+        let requestOrigin = try p.readLE(UInt32.self, at: 0)
+        let requestSequence = try p.readLE(UInt32.self, at: 4)
+        guard requestOrigin == profile.origin, requestSequence > 0 else { throw MeshError.invalid("Receipt is not for this phone’s request identity.") }
         return AuthenticatedReceipt(hubOrigin: try frame.readLE(UInt32.self, at: 6), hubSequence: try frame.readLE(UInt32.self, at: 10),
-                                    requestOrigin: try p.readLE(UInt32.self, at: 0), requestSequence: try p.readLE(UInt32.self, at: 4), status: p[8], text: text)
+                                    requestOrigin: requestOrigin, requestSequence: requestSequence, status: p[8], text: text)
     }
 
     private static func aad(_ header: Data) -> Data {

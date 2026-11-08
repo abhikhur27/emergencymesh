@@ -1,0 +1,1845 @@
+[
+  {
+    "name": "create_document",
+    "arguments": {
+      "name": "RescueMeshEnclosure"
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "OuterRoundedCoreA",
+      "obj_properties": {
+        "Length": 76,
+        "Width": 54,
+        "Height": 24,
+        "Placement": {
+          "Base": {
+            "x": 6,
+            "y": 0,
+            "z": 0
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "OuterRoundedCoreB",
+      "obj_properties": {
+        "Length": 88,
+        "Width": 42,
+        "Height": 24,
+        "Placement": {
+          "Base": {
+            "x": 0,
+            "y": 6,
+            "z": 0
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "OuterRoundedCore",
+      "obj_properties": {
+        "Base": "OuterRoundedCoreA",
+        "Tool": "OuterRoundedCoreB",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "OuterRoundedCorner1",
+      "obj_properties": {
+        "Radius": 6,
+        "Height": 24,
+        "Placement": {
+          "Base": {
+            "x": 6,
+            "y": 6,
+            "z": 0
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "OuterRoundedRound1",
+      "obj_properties": {
+        "Base": "OuterRoundedCore",
+        "Tool": "OuterRoundedCorner1",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "OuterRoundedCorner2",
+      "obj_properties": {
+        "Radius": 6,
+        "Height": 24,
+        "Placement": {
+          "Base": {
+            "x": 82,
+            "y": 6,
+            "z": 0
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "OuterRoundedRound2",
+      "obj_properties": {
+        "Base": "OuterRoundedRound1",
+        "Tool": "OuterRoundedCorner2",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "OuterRoundedCorner3",
+      "obj_properties": {
+        "Radius": 6,
+        "Height": 24,
+        "Placement": {
+          "Base": {
+            "x": 6,
+            "y": 48,
+            "z": 0
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "OuterRoundedRound3",
+      "obj_properties": {
+        "Base": "OuterRoundedRound2",
+        "Tool": "OuterRoundedCorner3",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "OuterRoundedCorner4",
+      "obj_properties": {
+        "Radius": 6,
+        "Height": 24,
+        "Placement": {
+          "Base": {
+            "x": 82,
+            "y": 48,
+            "z": 0
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "OuterRounded",
+      "obj_properties": {
+        "Base": "OuterRoundedRound3",
+        "Tool": "OuterRoundedCorner4",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "InnerCavityCoreA",
+      "obj_properties": {
+        "Length": 76,
+        "Width": 49.2,
+        "Height": 25,
+        "Placement": {
+          "Base": {
+            "x": 6,
+            "y": 2.4,
+            "z": 2.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "InnerCavityCoreB",
+      "obj_properties": {
+        "Length": 83.2,
+        "Width": 42,
+        "Height": 25,
+        "Placement": {
+          "Base": {
+            "x": 2.4,
+            "y": 6,
+            "z": 2.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "InnerCavityCore",
+      "obj_properties": {
+        "Base": "InnerCavityCoreA",
+        "Tool": "InnerCavityCoreB",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "InnerCavityCorner1",
+      "obj_properties": {
+        "Radius": 3.6,
+        "Height": 25,
+        "Placement": {
+          "Base": {
+            "x": 6,
+            "y": 6,
+            "z": 2.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "InnerCavityRound1",
+      "obj_properties": {
+        "Base": "InnerCavityCore",
+        "Tool": "InnerCavityCorner1",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "InnerCavityCorner2",
+      "obj_properties": {
+        "Radius": 3.6,
+        "Height": 25,
+        "Placement": {
+          "Base": {
+            "x": 82.00000000000001,
+            "y": 6,
+            "z": 2.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "InnerCavityRound2",
+      "obj_properties": {
+        "Base": "InnerCavityRound1",
+        "Tool": "InnerCavityCorner2",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "InnerCavityCorner3",
+      "obj_properties": {
+        "Radius": 3.6,
+        "Height": 25,
+        "Placement": {
+          "Base": {
+            "x": 6,
+            "y": 48,
+            "z": 2.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "InnerCavityRound3",
+      "obj_properties": {
+        "Base": "InnerCavityRound2",
+        "Tool": "InnerCavityCorner3",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "InnerCavityCorner4",
+      "obj_properties": {
+        "Radius": 3.6,
+        "Height": 25,
+        "Placement": {
+          "Base": {
+            "x": 82.00000000000001,
+            "y": 48,
+            "z": 2.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "InnerCavity",
+      "obj_properties": {
+        "Base": "InnerCavityRound3",
+        "Tool": "InnerCavityCorner4",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cut",
+      "obj_name": "OpenShell",
+      "obj_properties": {
+        "Base": "OuterRounded",
+        "Tool": "InnerCavity",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "Boss1",
+      "obj_properties": {
+        "Radius": 3.3,
+        "Height": 21.6,
+        "Placement": {
+          "Base": {
+            "x": 6,
+            "y": 6,
+            "z": 2.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "WithBoss1",
+      "obj_properties": {
+        "Base": "OpenShell",
+        "Tool": "Boss1",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "Pilot1",
+      "obj_properties": {
+        "Radius": 1.05,
+        "Height": 22,
+        "Placement": {
+          "Base": {
+            "x": 6,
+            "y": 6,
+            "z": 3.2
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cut",
+      "obj_name": "BossDrilled1",
+      "obj_properties": {
+        "Base": "WithBoss1",
+        "Tool": "Pilot1",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "Boss2",
+      "obj_properties": {
+        "Radius": 3.3,
+        "Height": 21.6,
+        "Placement": {
+          "Base": {
+            "x": 82,
+            "y": 6,
+            "z": 2.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "WithBoss2",
+      "obj_properties": {
+        "Base": "BossDrilled1",
+        "Tool": "Boss2",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "Pilot2",
+      "obj_properties": {
+        "Radius": 1.05,
+        "Height": 22,
+        "Placement": {
+          "Base": {
+            "x": 82,
+            "y": 6,
+            "z": 3.2
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cut",
+      "obj_name": "BossDrilled2",
+      "obj_properties": {
+        "Base": "WithBoss2",
+        "Tool": "Pilot2",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "Boss3",
+      "obj_properties": {
+        "Radius": 3.3,
+        "Height": 21.6,
+        "Placement": {
+          "Base": {
+            "x": 6,
+            "y": 48,
+            "z": 2.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "WithBoss3",
+      "obj_properties": {
+        "Base": "BossDrilled2",
+        "Tool": "Boss3",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "Pilot3",
+      "obj_properties": {
+        "Radius": 1.05,
+        "Height": 22,
+        "Placement": {
+          "Base": {
+            "x": 6,
+            "y": 48,
+            "z": 3.2
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cut",
+      "obj_name": "BossDrilled3",
+      "obj_properties": {
+        "Base": "WithBoss3",
+        "Tool": "Pilot3",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "Boss4",
+      "obj_properties": {
+        "Radius": 3.3,
+        "Height": 21.6,
+        "Placement": {
+          "Base": {
+            "x": 82,
+            "y": 48,
+            "z": 2.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "WithBoss4",
+      "obj_properties": {
+        "Base": "BossDrilled3",
+        "Tool": "Boss4",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "Pilot4",
+      "obj_properties": {
+        "Radius": 1.05,
+        "Height": 22,
+        "Placement": {
+          "Base": {
+            "x": 82,
+            "y": 48,
+            "z": 3.2
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cut",
+      "obj_name": "BossDrilled4",
+      "obj_properties": {
+        "Base": "WithBoss4",
+        "Tool": "Pilot4",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "USBOpening",
+      "obj_properties": {
+        "Length": 8,
+        "Width": 18,
+        "Height": 12,
+        "Placement": {
+          "Base": {
+            "x": -2,
+            "y": 18,
+            "z": 6
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cut",
+      "obj_name": "USBAccess",
+      "obj_properties": {
+        "Base": "BossDrilled4",
+        "Tool": "USBOpening",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "AntennaOpening",
+      "obj_properties": {
+        "Length": 8,
+        "Width": 16,
+        "Height": 19,
+        "Placement": {
+          "Base": {
+            "x": 83,
+            "y": 19,
+            "z": 6
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cut",
+      "obj_name": "BaseFinished",
+      "obj_properties": {
+        "Base": "USBAccess",
+        "Tool": "AntennaOpening",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "SupportRail1",
+      "obj_properties": {
+        "Length": 62,
+        "Width": 3,
+        "Height": 2.5,
+        "Placement": {
+          "Base": {
+            "x": 13,
+            "y": 10,
+            "z": 2.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "BaseRail1",
+      "obj_properties": {
+        "Base": "BaseFinished",
+        "Tool": "SupportRail1",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "SupportRail2",
+      "obj_properties": {
+        "Length": 62,
+        "Width": 3,
+        "Height": 2.5,
+        "Placement": {
+          "Base": {
+            "x": 13,
+            "y": 40,
+            "z": 2.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "BasePrint",
+      "obj_properties": {
+        "Base": "BaseRail1",
+        "Tool": "SupportRail2",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "LidBlankCoreA",
+      "obj_properties": {
+        "Length": 76,
+        "Width": 54,
+        "Height": 3,
+        "Placement": {
+          "Base": {
+            "x": 6,
+            "y": 70,
+            "z": 0
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "LidBlankCoreB",
+      "obj_properties": {
+        "Length": 88,
+        "Width": 42,
+        "Height": 3,
+        "Placement": {
+          "Base": {
+            "x": 0,
+            "y": 76,
+            "z": 0
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "LidBlankCore",
+      "obj_properties": {
+        "Base": "LidBlankCoreA",
+        "Tool": "LidBlankCoreB",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "LidBlankCorner1",
+      "obj_properties": {
+        "Radius": 6,
+        "Height": 3,
+        "Placement": {
+          "Base": {
+            "x": 6,
+            "y": 76,
+            "z": 0
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "LidBlankRound1",
+      "obj_properties": {
+        "Base": "LidBlankCore",
+        "Tool": "LidBlankCorner1",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "LidBlankCorner2",
+      "obj_properties": {
+        "Radius": 6,
+        "Height": 3,
+        "Placement": {
+          "Base": {
+            "x": 82,
+            "y": 76,
+            "z": 0
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "LidBlankRound2",
+      "obj_properties": {
+        "Base": "LidBlankRound1",
+        "Tool": "LidBlankCorner2",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "LidBlankCorner3",
+      "obj_properties": {
+        "Radius": 6,
+        "Height": 3,
+        "Placement": {
+          "Base": {
+            "x": 6,
+            "y": 118,
+            "z": 0
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "LidBlankRound3",
+      "obj_properties": {
+        "Base": "LidBlankRound2",
+        "Tool": "LidBlankCorner3",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "LidBlankCorner4",
+      "obj_properties": {
+        "Radius": 6,
+        "Height": 3,
+        "Placement": {
+          "Base": {
+            "x": 82,
+            "y": 118,
+            "z": 0
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "LidBlank",
+      "obj_properties": {
+        "Base": "LidBlankRound3",
+        "Tool": "LidBlankCorner4",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "OLEDWindow",
+      "obj_properties": {
+        "Length": 32,
+        "Width": 18,
+        "Height": 6,
+        "Placement": {
+          "Base": {
+            "x": 17,
+            "y": 88,
+            "z": -1
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cut",
+      "obj_name": "LidWindow",
+      "obj_properties": {
+        "Base": "LidBlank",
+        "Tool": "OLEDWindow",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "LidScrew1",
+      "obj_properties": {
+        "Radius": 1.45,
+        "Height": 5,
+        "Placement": {
+          "Base": {
+            "x": 6,
+            "y": 76,
+            "z": -1
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cut",
+      "obj_name": "LidHole1",
+      "obj_properties": {
+        "Base": "LidWindow",
+        "Tool": "LidScrew1",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "LidScrew2",
+      "obj_properties": {
+        "Radius": 1.45,
+        "Height": 5,
+        "Placement": {
+          "Base": {
+            "x": 82,
+            "y": 76,
+            "z": -1
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cut",
+      "obj_name": "LidHole2",
+      "obj_properties": {
+        "Base": "LidHole1",
+        "Tool": "LidScrew2",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "LidScrew3",
+      "obj_properties": {
+        "Radius": 1.45,
+        "Height": 5,
+        "Placement": {
+          "Base": {
+            "x": 6,
+            "y": 118,
+            "z": -1
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cut",
+      "obj_name": "LidHole3",
+      "obj_properties": {
+        "Base": "LidHole2",
+        "Tool": "LidScrew3",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "LidScrew4",
+      "obj_properties": {
+        "Radius": 1.45,
+        "Height": 5,
+        "Placement": {
+          "Base": {
+            "x": 82,
+            "y": 118,
+            "z": -1
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cut",
+      "obj_name": "LidHole4",
+      "obj_properties": {
+        "Base": "LidHole3",
+        "Tool": "LidScrew4",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "SignalBar1",
+      "obj_properties": {
+        "Length": 4,
+        "Width": 6,
+        "Height": 0.6,
+        "Placement": {
+          "Base": {
+            "x": 62,
+            "y": 84,
+            "z": 3
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "LidBars1",
+      "obj_properties": {
+        "Base": "LidHole4",
+        "Tool": "SignalBar1",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "SignalBar2",
+      "obj_properties": {
+        "Length": 4,
+        "Width": 6,
+        "Height": 0.6,
+        "Placement": {
+          "Base": {
+            "x": 62,
+            "y": 94,
+            "z": 3
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "LidBars2",
+      "obj_properties": {
+        "Base": "LidBars1",
+        "Tool": "SignalBar2",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "SignalBar3",
+      "obj_properties": {
+        "Length": 4,
+        "Width": 6,
+        "Height": 0.6,
+        "Placement": {
+          "Base": {
+            "x": 62,
+            "y": 104,
+            "z": 3
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "LidPrint",
+      "obj_properties": {
+        "Base": "LidBars2",
+        "Tool": "SignalBar3",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "AdapterOuterCoreA",
+      "obj_properties": {
+        "Length": 32,
+        "Width": 28,
+        "Height": 14,
+        "Placement": {
+          "Base": {
+            "x": 4,
+            "y": 143,
+            "z": 0
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "AdapterOuterCoreB",
+      "obj_properties": {
+        "Length": 40,
+        "Width": 20,
+        "Height": 14,
+        "Placement": {
+          "Base": {
+            "x": 0,
+            "y": 147,
+            "z": 0
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "AdapterOuterCore",
+      "obj_properties": {
+        "Base": "AdapterOuterCoreA",
+        "Tool": "AdapterOuterCoreB",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "AdapterOuterCorner1",
+      "obj_properties": {
+        "Radius": 4,
+        "Height": 14,
+        "Placement": {
+          "Base": {
+            "x": 4,
+            "y": 147,
+            "z": 0
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "AdapterOuterRound1",
+      "obj_properties": {
+        "Base": "AdapterOuterCore",
+        "Tool": "AdapterOuterCorner1",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "AdapterOuterCorner2",
+      "obj_properties": {
+        "Radius": 4,
+        "Height": 14,
+        "Placement": {
+          "Base": {
+            "x": 36,
+            "y": 147,
+            "z": 0
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "AdapterOuterRound2",
+      "obj_properties": {
+        "Base": "AdapterOuterRound1",
+        "Tool": "AdapterOuterCorner2",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "AdapterOuterCorner3",
+      "obj_properties": {
+        "Radius": 4,
+        "Height": 14,
+        "Placement": {
+          "Base": {
+            "x": 4,
+            "y": 167,
+            "z": 0
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "AdapterOuterRound3",
+      "obj_properties": {
+        "Base": "AdapterOuterRound2",
+        "Tool": "AdapterOuterCorner3",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "AdapterOuterCorner4",
+      "obj_properties": {
+        "Radius": 4,
+        "Height": 14,
+        "Placement": {
+          "Base": {
+            "x": 36,
+            "y": 167,
+            "z": 0
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "AdapterOuter",
+      "obj_properties": {
+        "Base": "AdapterOuterRound3",
+        "Tool": "AdapterOuterCorner4",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "AdapterPocketCoreA",
+      "obj_properties": {
+        "Length": 32,
+        "Width": 23.2,
+        "Height": 15,
+        "Placement": {
+          "Base": {
+            "x": 4,
+            "y": 145.4,
+            "z": 2.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "AdapterPocketCoreB",
+      "obj_properties": {
+        "Length": 35.2,
+        "Width": 20,
+        "Height": 15,
+        "Placement": {
+          "Base": {
+            "x": 2.4,
+            "y": 147,
+            "z": 2.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "AdapterPocketCore",
+      "obj_properties": {
+        "Base": "AdapterPocketCoreA",
+        "Tool": "AdapterPocketCoreB",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "AdapterPocketCorner1",
+      "obj_properties": {
+        "Radius": 1.6,
+        "Height": 15,
+        "Placement": {
+          "Base": {
+            "x": 4,
+            "y": 147,
+            "z": 2.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "AdapterPocketRound1",
+      "obj_properties": {
+        "Base": "AdapterPocketCore",
+        "Tool": "AdapterPocketCorner1",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "AdapterPocketCorner2",
+      "obj_properties": {
+        "Radius": 1.6,
+        "Height": 15,
+        "Placement": {
+          "Base": {
+            "x": 36,
+            "y": 147,
+            "z": 2.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "AdapterPocketRound2",
+      "obj_properties": {
+        "Base": "AdapterPocketRound1",
+        "Tool": "AdapterPocketCorner2",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "AdapterPocketCorner3",
+      "obj_properties": {
+        "Radius": 1.6,
+        "Height": 15,
+        "Placement": {
+          "Base": {
+            "x": 4,
+            "y": 167,
+            "z": 2.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "AdapterPocketRound3",
+      "obj_properties": {
+        "Base": "AdapterPocketRound2",
+        "Tool": "AdapterPocketCorner3",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cylinder",
+      "obj_name": "AdapterPocketCorner4",
+      "obj_properties": {
+        "Radius": 1.6,
+        "Height": 15,
+        "Placement": {
+          "Base": {
+            "x": 36,
+            "y": 167,
+            "z": 2.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Fuse",
+      "obj_name": "AdapterPocket",
+      "obj_properties": {
+        "Base": "AdapterPocketRound3",
+        "Tool": "AdapterPocketCorner4",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cut",
+      "obj_name": "AdapterTray",
+      "obj_properties": {
+        "Base": "AdapterOuter",
+        "Tool": "AdapterPocket",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "AdapterUSBCEnd",
+      "obj_properties": {
+        "Length": 7,
+        "Width": 18,
+        "Height": 13,
+        "Placement": {
+          "Base": {
+            "x": -1,
+            "y": 148,
+            "z": 4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cut",
+      "obj_name": "AdapterEndA",
+      "obj_properties": {
+        "Base": "AdapterTray",
+        "Tool": "AdapterUSBCEnd",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "AdapterUSBEnd",
+      "obj_properties": {
+        "Length": 7,
+        "Width": 18,
+        "Height": 13,
+        "Placement": {
+          "Base": {
+            "x": 35,
+            "y": 148,
+            "z": 4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cut",
+      "obj_name": "AdapterEndB",
+      "obj_properties": {
+        "Base": "AdapterEndA",
+        "Tool": "AdapterUSBEnd",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "TieSlotA",
+      "obj_properties": {
+        "Length": 2.5,
+        "Width": 30,
+        "Height": 1.8,
+        "Placement": {
+          "Base": {
+            "x": 10,
+            "y": 142,
+            "z": 0.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cut",
+      "obj_name": "AdapterStrapA",
+      "obj_properties": {
+        "Base": "AdapterEndB",
+        "Tool": "TieSlotA",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Box",
+      "obj_name": "TieSlotB",
+      "obj_properties": {
+        "Length": 2.5,
+        "Width": 30,
+        "Height": 1.8,
+        "Placement": {
+          "Base": {
+            "x": 27.5,
+            "y": 142,
+            "z": 0.4
+          }
+        }
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "create_object",
+    "arguments": {
+      "doc_name": "RescueMeshEnclosure",
+      "obj_type": "Part::Cut",
+      "obj_name": "AdapterPrint",
+      "obj_properties": {
+        "Base": "AdapterStrapA",
+        "Tool": "TieSlotB",
+        "Refine": true
+      },
+      "include_screenshot": false
+    }
+  },
+  {
+    "name": "execute_code",
+    "arguments": {
+      "code": "import Part, Mesh, json\ndoc = FreeCAD.getDocument('RescueMeshEnclosure')\nfor item in doc.Objects: item.ViewObject.Visibility = item.Name in ['BasePrint', 'LidPrint', 'AdapterPrint']\ndoc.getObject('BasePrint').ViewObject.ShapeColor=(0.10,0.13,0.16)\ndoc.getObject('LidPrint').ViewObject.ShapeColor=(0.96,0.34,0.17)\ndoc.getObject('AdapterPrint').ViewObject.ShapeColor=(0.10,0.13,0.16)\ndoc.recompute()\ndoc.saveAs('C:/Users/abhim/Documents/ChatGPT/hackutd/emergency-mesh/hardware/RescueMesh-enclosure.FCStd')\nPart.export([doc.getObject('BasePrint'),doc.getObject('LidPrint'),doc.getObject('AdapterPrint')], 'C:/Users/abhim/Documents/ChatGPT/hackutd/emergency-mesh/hardware/RescueMesh-enclosure.step')\nfor name in ['BasePrint','LidPrint','AdapterPrint']:\n    Mesh.export([doc.getObject(name)], 'C:/Users/abhim/Documents/ChatGPT/hackutd/emergency-mesh/hardware/' + name + '.stl')\n    s=doc.getObject(name).Shape\n    print(json.dumps({'object':name,'valid':s.isValid(),'solids':len(s.Solids),'volume_mm3':s.Volume,'bounds_mm':[s.BoundBox.XLength,s.BoundBox.YLength,s.BoundBox.ZLength]}))\nGui.activeDocument().activeView().viewAxonometric()\nGui.activeDocument().activeView().fitAll()",
+      "include_screenshot": false,
+      "timeout": 180
+    }
+  },
+  {
+    "name": "get_view",
+    "arguments": {
+      "view_name": "Isometric",
+      "width": 1400,
+      "height": 1000
+    },
+    "imagePath": "C:/Users/abhim/Documents/ChatGPT/hackutd/emergency-mesh/hardware/enclosure-preview.png"
+  },
+  {
+    "name": "get_rpc_status",
+    "arguments": {}
+  }
+]

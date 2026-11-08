@@ -10,7 +10,7 @@ struct EmergencyMeshApp: App {
                 .overlay {
                     if scenePhase != .active {
                         Color(uiColor: .systemBackground).ignoresSafeArea().overlay {
-                            Label("EmergencyMesh", systemImage: "antenna.radiowaves.left.and.right").font(.title2.weight(.semibold))
+                            Label("RescueMesh", systemImage: "antenna.radiowaves.left.and.right").font(.title2.weight(.semibold))
                         }
                     }
                 }

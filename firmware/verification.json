@@ -1,0 +1,106 @@
+{
+  "verifiedAtUtc": "2026-11-08T07:59:28Z",
+  "host": "ABHIKHUR",
+  "scope": "Native software tests, all-role compilation and matching unflashed release exports",
+  "firmwareRevision": "rescuemesh-oled-v3",
+  "wireProtocolVersion": 1,
+  "platformioCore": "6.1.18",
+  "platform": "espressif32@6.13.0",
+  "buildCommand": "python -m platformio run -e companion -e relay -e hub",
+  "buildExitCode": 0,
+  "finalBuildSourceStable": true,
+  "roles": {
+    "companion": {
+      "bleEnabled": true,
+      "staticRamBytes": 59956,
+      "programBytes": 1061717,
+      "releaseDirectory": "releases/companion",
+      "firmwareBytes": 1068288,
+      "firmwareSha256": "666632ae537705de094c0c0417adb7484d8dd2580bc7a40d28576ac95872434f"
+    },
+    "relay": {
+      "bleEnabled": false,
+      "staticRamBytes": 49704,
+      "programBytes": 786625,
+      "releaseDirectory": "releases/relay",
+      "firmwareBytes": 793200,
+      "firmwareSha256": "7da9dd46974edde63ec585d9267c0fb5fbd802f659a955fb23da34aed85e99e4"
+    },
+    "hub": {
+      "bleEnabled": false,
+      "staticRamBytes": 49704,
+      "programBytes": 788737,
+      "releaseDirectory": "releases/hub",
+      "firmwareBytes": 795312,
+      "firmwareSha256": "e78e606f5012d86000e9363a5c65667a649ce8e2949fbf3f39e74ac13f942fee"
+    }
+  },
+  "nativeTestCommandWindows": "powershell -NoProfile -File scripts/test-native.ps1",
+  "nativeTestExitCode": 0,
+  "nativeTestGroupsPassed": 16,
+  "nativeTestSuites": [
+    "protocol",
+    "device_identity",
+    "status_screen"
+  ],
+  "nativeTests": [
+    "Malformed/type-size/region/key-ID envelope rejection",
+    "Loop identity ignores only mutable TTL",
+    "Three-hop forwarding preserves authenticated bytes",
+    "Largest frame indexed out-of-order BLE reassembly",
+    "Conflicting/short chunks rejected and partial state expires",
+    "Duplicate suppression permits an identical retry after six seconds",
+    "TX queue capacity/due times/clock wrap",
+    "Default BLE companion-only with explicit hub opt-in",
+    "Canonical MAC suffix distinguishes common-prefix boards",
+    "Role/suffix names reject silent truncation",
+    "Companion pairing/link/loss/reconnect scene selection",
+    "Actual queued work takes priority over unlinked decoration",
+    "Hub accepted-RX age, age units and packet-notice expiry",
+    "RX clock and notice handle millis rollover",
+    "Relay scenes ignore unrelated phone state",
+    "Radio fault overrides queue/link/reception scenes"
+  ],
+  "display": {
+    "panelPixels": [
+      128,
+      64
+    ],
+    "graphics": "Original monochrome envelope courier, with bounded two-frame walking feet for queued work",
+    "font": "Pinned Adafruit GFX FreeSansBold9pt7b title and default 1x body",
+    "acceptedReference": "../design/2026-11-07/rescuemesh-oled.png",
+    "stateSource": "Actual radio-ready flag, queued frame count, BLE connection+notification subscription and accepted nonsuppressed RX timestamp",
+    "receiveMeaning": "Structurally accepted radio packet; content authentication remains at the phone/hub",
+    "refresh": "At most once per second, skipped during TX or pending radio event, no animation delays",
+    "physicalVisualVerified": false,
+    "fabricatedBatteryOrDispatchStatus": false
+  },
+  "releaseImagesPerRole": 4,
+  "sourceHashesPerManifest": 5,
+  "statusHeaderIncludedInSourceHashes": true,
+  "allReleaseManifestImageSizesAndHashesReadBackAndVerified": true,
+  "allReleaseSourceHashesMatchCurrentSource": true,
+  "serialStatusQueryPreserved": true,
+  "physicalFlashVerified": false,
+  "hardwareAccessPerformedByThisUpdate": false,
+  "deploymentChangedByThisUpdate": false,
+  "blePhoneInteropVerified": false,
+  "overTheAirMeshVerified": false,
+  "phonePowerVerified": false,
+  "notes": [
+    "No USB/BLE ports were opened, boards flashed or services restarted by this firmware update.",
+    "The v1 wire format, radio PHY, forwarding, retry/duplicate rules, queue limits and companion-only BLE defaults are preserved.",
+    "The character describes local transport state and never claims hub authentication, emergency-service dispatch or responder arrival.",
+    "The new release manifests preserve all four image offsets and hash five production source files including include/status_screen.h.",
+    "Physical OLED appearance, actual BLE operation and radio transfer need the controlled board flash and bench check. Earlier revision hardware evidence does not verify these images."
+  ],
+  "controlledDeployment": {
+    "checkedAt": "2026-11-08T08:20:01.843292Z",
+    "hubPhysicalFlashVerified": true,
+    "imageWriteHashesVerified": 4,
+    "hubRadioReady": true,
+    "oledVisualVerified": false,
+    "companionPhysicalFlashVerified": false,
+    "receipt": "../docs/VERIFICATION.md"
+  }
+}

@@ -1,8 +1,8 @@
-# EmergencyMesh laptop hub
+# RescueMesh ECSW hub
 
-Local demo console, USB serial gateway, authenticated binary codec, durable incident/replay store and optional local AI extraction. No emergency services are connected. The console does not place calls or dispatch responders.
+Local operator workspace, USB LoRa gateway, enrolled-device authenticated codec, durable request store and automatic regional coordination. The physical ECSW hub receives actual radio reports; all emergency-service dispatch remains simulated.
 
-Requires Node24+. Windows and macOS are supported by the source and SerialPort; actual macOS execution remains a teammate check.
+Requires Node24+. From this directory:
 
 ```sh
 npm ci
@@ -10,62 +10,76 @@ npm run provision
 npm start -- --simulate --minutes 30
 ```
 
-Open `http://127.0.0.1:4781`. Paste the code from `.emergency/operator-token.txt` into the console. The code is regenerated every launch. Click **Send test report** to exercise the real encryption/validation/save/receipt pipeline using software transport. Test incidents are labeled. Simulation does not prove BLE, radio, range or phone power.
+Open `http://127.0.0.1:4781`. Sign in as **operator** with the password in the private `.emergency/operator-token.txt`. The existing token is preserved across starts. Remember this browser creates a revocable persistent cookie; signing out invalidates it. A browser session does not expose its token in the interface. Software test reports are labeled and have a separate source filter.
 
-For hardware, flash the hub board firmware, connect a **data-capable** USB cable, identify its port and start:
+## Physical radio and local Nemotron
 
 ```sh
 npm run ports
-npm start -- --serial COM9 --minutes 120
-# macOS example; replace with the actual discovered path:
-npm start -- --serial /dev/cu.usbserial-0001 --minutes 120
+npm start -- --serial <actual-USB-UART-port> --ollama --model nemotron-3-nano:4b --minutes 120
 ```
 
-Choose the actual USB UART board. Windows Bluetooth serial ports are not the ESP32. Serial baud is115200. Opening the OS port only means **USB port open, radio unverified**. The host requests `{"op":"status"}` immediately and twice during boot. Transmission remains blocked until the board reports `radioReady:true`, role `hub`, protocol1, matching region/key ID and frequency915MHz. Missing/malformed status, a profile mismatch or radio initialization/receive failure is visible and blocks host transmission. **Board reports radio ready** is a firmware self-report, never proof of range, RF reception or phone delivery. A host write or firmware queued message also does not confirm delivery. If the port closes, restart the bounded hub session after reconnecting; reports and encrypted receipts remain saved.
+Use the actual port from `npm run ports`; Bluetooth serial ports are not the ESP32. The cable must carry data. Serial baud is115200. The host requests board status during boot and requires a matching hub role, protocol, region, key slot and915MHz radio profile before transmitting. An open USB port and board-ready self-report do not establish RF delivery or range. Reports and receipts persist if the serial session stops; reconnect and restart the session deliberately.
 
-## Private provisioning
+Ollama must already serve the installed local model at `http://127.0.0.1:11434`. The hub never downloads a model or substitutes cloud inference. The actual `nemotron-3-nano:4b` native resource tool workflow has been exercised on the laptop CPU; cold inference may take longer than a warm request. The interface reports the latest observed model source/success/error rather than assuming availability.
 
-`npm run provision` creates a random regional AES256 key in `.emergency/config.json` if absent and a new unique private phone profile `phone-profile-<time>-<random>.json` on every call. It prints paths, never the key. Existing hub configuration is preserved. Transfer the phone profile privately to the iPhone app's provisioning flow. Each phone needs its own origin/profile but shares the regional key for this demonstration. The app stores its imported key in Keychain; radio firmware has no key.
+Intake authenticates, saves the original and submits its hub-received receipt before model or supervisor work. The agent validates the original category, sender priority, people count and note, calls `lookup_resources`, validates the returned arguments, then prepares a structured case using source policy. It cannot rewrite source fields or invent a dispatch. Timeouts, invalid tools and overload use a labeled rules fallback. A durable revisioned outbox retries supervisor delivery without creating a second case.
 
-Profile format:
+## Stable region and private runtime
+
+The public reference is `../regions/utd-ecsw.json`. The first start creates `.emergency/region-profile.json`; later starts preserve it. The offline campus schematic uses normalized landmark positions and never claims GPS coordinates, radio coverage or relay paths. Multiple landmarks in a note remain ambiguous until an operator corrects the case. Corrections annotate the case; the original phone request remains unchanged.
+
+The private `.emergency/runtime.json` controls optional integration settings. Its shape is:
 
 ```json
-{"region":1,"keyId":1,"keyHex":"<64 hexadecimal characters>","origin":123456789}
+{
+  "hubId": "ecsw",
+  "hubName": "ECSW",
+  "model": "nemotron-3-nano:4b",
+  "mongoUri": "<private authenticated MongoDB URI>",
+  "mongoDatabase": "rescuemesh_hub",
+  "supervisorUrl": "<configured supervisor HTTPS origin>",
+  "supervisorToken": "<private scoped ECSW machine credential>",
+  "supervisorPublicUrl": "<operator-facing supervisor HTTPS origin>"
+}
 ```
 
-Never use the public fixture key in `fixtures/golden-v1.json` for actual reports. A shared key allows any provisioned participant to impersonate another sender or hub. This demo does not provide field-grade enrollment, identity verification or revocation. Firmware region must match the profile. For another region use `node src/cli.mjs provision --region 2 --data .emergency-region2` and start with the same `--data` path.
+Keep actual values out of source control, screenshots and logs. Missing supervisor settings leave work visibly pending in the local outbox. The supervisor must explicitly authorize this hub's machine credential. Public URL validation and browser operator authentication are independent of hub-to-hub authorization. The laptop operator server binds only loopback and should not be publicly tunneled.
 
-The ignored `.emergency` directory holds the key, operator access code and plaintext incident details for the local console. Files use restrictive Unix permissions where supported; Windows uses the current user's filesystem ACLs. At-rest encryption and centralized access control are outside this prototype. Keep synthetic data in the demo and protect the laptop/OS account. Source archives must exclude `.emergency`, `node_modules`, logs and artifacts.
+## Device enrollment and message privacy
 
-## Optional local AI
+`npm run provision` preserves existing hub configuration and emits a new private phone profile. Each new phone gets a nonzero origin and independent random256-bit key. Transfer the file privately and import it in the iPhone app. Radio firmware and relays do not hold content keys. Profiles contain the compatible fields `region`, `keyId`, `keyHex`, `origin` plus device metadata; the common demo key slot is not a common secret.
 
-With Ollama already installed and serving on `127.0.0.1:11434`, and an already downloaded model:
+The hub resolves `(region, origin, keyId)` in its enrolled registry and rejects unknown or revoked tuples. Keys are authenticated and wrapped under a separate private hub master. Registered legacy profiles remain explicitly labeled and retain their old shared-key limitations; replace them with independent profiles to remove sibling access. Startup migration enrolls only explicitly known existing private profiles and does not accept arbitrary senders using the old regional key. A copied profile clones its identity. A compromised running hub can read its received reports. [Detailed key contract](../docs/device-security.md).
 
-```sh
-npm start -- --simulate --ollama --model llama3.2:latest --minutes 30
-```
+The wire remains compact AES-256-GCM v1: authenticated header, nonce, compact binary request and full tag. Retries reuse sealed bytes. Relay hop metadata may change while authenticated content remains opaque. Compression is not applied to ciphertext. Public deterministic fixtures use public keys and fixed nonces only for tests.
 
-`OLLAMA_MODEL` is also supported. The hub never downloads models and never uses a cloud inference endpoint. It sends only to the fixed loopback endpoint. Turn off Ollama cloud features in the host's setup if needed. Inference has a12second timeout, a bounded queue and100output-token limit. The encrypted receipt is persisted and submitted before inference begins.
+## Operator workflow and reception study
 
-The model selects at most three existing sentence indices from the reported note. Software validates those indices and builds the displayed summary from original structured fields and **exact source spans**. Model-generated free prose is rejected. Priority, people, location and concern flags always come directly from the authenticated report. A selection may omit detail; the full original remains visible and authoritative. Timeout, malformed output or unavailable model produces a visibly labeled extractive fallback. Input reports remain unverified user claims. No AI triage, diagnosis, advice, action execution or automatic escalation exists.
+Local requests starts with **Radio reports** and the original selected message. Original category, priority, people and note stay visible or available in source details. ECSW automatically transforms and shares new reports with the regional supervisor; there is no request-support or authorization gate. Historical reports from before this feature are not silently replayed into new allocations.
 
-## Operator handoff
+Inspect summary opens the validated summary and optional agent activity. Correct location saves an annotation and automatically shares a new revision for an existing coordination case. Pause automation stops new coordination work while preserving radio intake and saved state. Regional handoffs shows actual acknowledged revisions, allocation and simulation status.
 
-**Mark reviewed** persists the operator action and sends an authenticated status2receipt referencing the original request. It means reviewed by a demo operator; it never means services dispatched. **Export demo handoff** becomes available after review and downloads a JSON bundle containing the original report, source-based summary and explicit `simulation:true`, `servicesContacted:false` labels. Integrating a real dispatch agency requires an agreed endpoint/workflow, authorization, service availability, operator procedures and separate validation.
+**Record human review** is an explicit optional action. It persists that decision and submits a separate authenticated operator-reviewed receipt. Automatic agent work never impersonates this review. A receipt submitted to the serial transport is not confirmation that the phone received it. Export remains a simulation-only API operation; no real emergency service is contacted.
 
-New requests outside24hours in the past or5minutes in the future are rejected. Exact authenticated duplicates resend the original/current receipt and retain one incident, including after restart. A changed encrypted payload reusing the same region/origin/sequence is rejected. The journal retains up to4096incidents and replay identities; full storage fails closed rather than silently losing replay history. Authenticated-request limits, including duplicates, are30per origin/minute and120total/minute, preventing unlimited receipt amplification. Shared regional-key holders can exhaust quotas; field abuse resistance is not solved by this demo.
+Reception study aggregates saved hardware reports. A distinct request counts once even if it was received repeatedly. RSSI/SNR are latest receiver observations, not end-to-end reliability or range estimates. Missing GPS remains missing. A note naming one recognized landmark is an approximate reference, not a verified sender position. Actual GPS and recorded accuracy appear in source details; the non-georeferenced schematic does not plot them.
 
-## Checks
+## User storage and durability
+
+The private local identity store preserves salted operator password hashes, hashed browser sessions and safe enrolled-device metadata. Authenticated MongoDB mirrors those user/session/device records when configured; the application exposes actual connected/degraded status. Local Community MongoDB authenticated read/write was verified for this implementation. Atlas is not configured or claimed.
+
+The incident JSON spool and coordination outbox remain durable when MongoDB or the supervisor is unavailable. After decryption, incident files contain sensitive plaintext and are not encrypted at rest by the hub. Registry wrapping does not protect a stolen wrapping master stored beside it. Protect the OS account and private data directory. Unix restrictive modes are applied where supported; Windows access follows the current filesystem ACLs.
+
+New reports outside24hours in the past or5minutes in the future are rejected. Exact duplicates retain one saved incident and resend the current receipt across restart. Conflicting reuse of an authenticated request identity is rejected. Bounded replay journals fail closed when full; rate limits and queue bounds do not guarantee field abuse resistance or delivery.
+
+## Checks and limits
 
 ```sh
 npm test
 npm run check
 npm run verify:simulation
-npm audit --omit=dev
 ```
 
-Tests cover encryption/nonce/AAD integrity, UTF8byte limits, malformed frames, unknown profiles, stale reports, replay conflicts, saved-before-ACK ordering, duplicate/retry/restart recovery, operator export gating, local API auth/origin/Host/CSRF protection, serial framing recovery and constrained local-model output. `verify:simulation` runs a serialized encrypted request through the actual hub core and decrypts both received/reviewed receipts, checking tamper rejection.
+Tests cover codec integrity, enrollment/sibling-key rejection, malformed/stale/replayed requests, saved-before-ACK ordering, persistent sessions and logout revocation, CSRF/Host/Origin checks, serial readiness, local-model tools, automatic coordination retries, location revisions and immutable originals. Simulation executes actual codec/core logic without proving radio propagation, iPhone power or native BLE behavior.
 
-The HTTP server binds only127.0.0.1, rejects arbitrary Host and Origin values, requires HttpOnly SameSite=Strict session cookies and per-session CSRF tokens for mutations, and uses a restrictive CSP. Loopback HTTP cookies are intentionally not Secure. Do not expose this server using a tunnel or public listener. Sessions end after120minutes by default; `--minutes` accepts up to1440. This is a foreground bounded demo, not a background service or continuing laptop deployment.
-
-Primary implementation references: [Node crypto](https://nodejs.org/api/crypto.html), [SerialPort API](https://serialport.io/docs/guide-usage/). Shared wire/BLE/serial contract is [PROTOCOL.md](../docs/PROTOCOL.md).
+The HTTP server uses HttpOnly same-site cookies, CSRF tokens and a restrictive CSP; loopback HTTP cookies are intentionally not Secure. The CLI is bounded to120minutes by default, with `--minutes` up to1440. A host deployment owner may manage a separate bounded runner; starting this CLI does not install a recurring task. No Brev GPU instance has been provisioned; its signed-in workspace is blocked by Terms of Service acceptance and the credit balance is unverified. The regional supervisor currently uses an independently managed local desktop GPU. Native Mac/iPhone checks, current companion flashing, true RF multihop, coverage and enclosure fit require separate receipts.

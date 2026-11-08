@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data:; style-src 'sha256-I84QPpnWqeogHhK71bcw2THcSjivnC2FYqPekNjThk8='; script-src 'sha256-oh6IMdRmgj1yNFJWWuOYKcKWsvZLqZpGjFhcPns6Zj4='; base-uri 'none'; form-action 'none'">
+  <title>RescueMesh — one request changing hands</title>
+  <meta name="description" content="A static six-beat RescueMesh storyboard following one synthetic drinking-water request. No live services.">
+  <style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:#232326;background:#f6f6f3;font-size:16px;--ink:#232326;--muted:#62666a;--line:#dedfe1;--map:#e8e9e6;--white:#fff;--action:#E20074;--accent:#E20074;--focus:#a50055;--error:#9a3f2f;color-scheme:light}
+*{box-sizing:border-box}body{margin:0}button,input,select,textarea{font:inherit;color:inherit}button{cursor:pointer;min-height:44px;border:1px solid var(--line);border-radius:5px;padding:10px 16px;background:white}button:hover:not(:disabled){background:#f5f3f4}button:disabled{cursor:default;color:#858d85;background:#f4f5f2}button.primary{background:var(--action);border-color:var(--action);color:white;font-weight:500}button.primary:hover{background:#bd0061}button.link{padding:0;min-height:36px;border:0;background:none;color:var(--action);text-decoration:underline;text-underline-offset:4px}button.link:hover{background:none;color:#111e16}button,a,summary,input,select,textarea{outline-offset:4px}button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--focus)}::selection{background:#f6d6e6;color:var(--ink)}a{color:var(--action);text-underline-offset:4px}.skip{position:absolute;top:-100px;background:white;padding:12px;z-index:10}.skip:focus{top:8px;left:8px}.sr-only{position:absolute;width:1px;height:1px;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}h1,h2,h3,p{margin-top:0}h1{font-size:29px;line-height:1.22;font-weight:600;letter-spacing:-.025em;margin-bottom:17px}h2{font-size:20px;line-height:1.35;font-weight:600;letter-spacing:-.015em;margin-bottom:14px}h3{font-size:15px;font-weight:600;margin:0 0 8px}p{line-height:1.55;margin-bottom:18px}.muted{color:var(--muted)}.fine{font-size:12px;color:var(--muted);line-height:1.6}.small{font-size:14px}.story-header{max-width:1440px;display:flex;align-items:center;gap:24px;margin:auto;padding:24px 36px 18px}.story-title{font-size:15px;color:var(--ink);font-weight:600;text-decoration:none}.story-header p{font-size:12px;color:var(--muted);margin:0;flex:1}.story-header>a:last-child{font-size:12px;white-space:nowrap}.journey-nav{max-width:1440px;margin:0 auto;display:grid;grid-template-columns:repeat(6,1fr);padding:0 36px;border-bottom:1px solid var(--line)}.journey-nav button{border:0;border-radius:0;background:none;padding:15px 8px 17px;text-align:left;font-size:13px;color:var(--muted);line-height:1.35;position:relative}.journey-nav button b{font-size:11px;font-weight:500;display:block;margin-bottom:6px;color:#777b7a;font-variant-numeric:tabular-nums}.journey-nav button[aria-current=step]{color:var(--ink);box-shadow:inset 0 -2px var(--ink)}.journey-nav button[aria-current=step] b{color:var(--accent)}main{max-width:1440px;padding:0 36px;margin:auto}.beat-context{display:flex;gap:24px;justify-content:space-between;align-items:baseline;margin:24px 0 14px;min-height:22px}.beat-context p{font-size:12px;color:var(--muted);margin:0}.beat-context span{font-size:12px;color:var(--muted);white-space:nowrap}#workspace{background:white;border:1px solid var(--line);min-height:680px;overflow:hidden;border-radius:8px}#workspace:focus{outline:0}.story-footer{display:flex;gap:20px;align-items:center;justify-content:space-between;margin:16px 0}.story-footer button{font-size:12px;min-height:36px;padding:7px 13px;background:none}.story-footer p{font-size:12px;color:var(--muted);margin:0}.story-extras{max-width:none;margin-top:16px;margin-bottom:32px;font-size:12px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px}.story-extras summary{min-height:30px;cursor:pointer}.story-extras p{max-width:75ch;margin:14px 0}.extra-controls{display:flex;gap:24px;align-items:center;flex-wrap:wrap;margin-top:14px}.extra-controls button{font-size:12px;min-height:34px;padding:6px 12px;background:none}.app-top{display:flex;align-items:center;gap:22px;padding:20px 28px;border-bottom:1px solid var(--line);min-height:67px}.brand{font-size:15px;font-weight:600;letter-spacing:-.02em}.app-top .place{font-size:13px;color:var(--muted)}.app-top .right{margin-left:auto;display:flex;gap:20px;align-items:center}.app-top .right button{font-size:12px}.local-workspace,.regional-workspace{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(390px,1fr);min-height:613px}.map-view{background:var(--map);position:relative;min-height:600px;display:flex;flex-direction:column}.map-head{display:flex;justify-content:space-between;gap:20px;padding:22px 24px 0;font-size:12px;color:#5d6260}.map-head p{margin:0;font-size:12px}.map-head strong{font-weight:500}.map-canvas{flex:1;min-height:400px;display:flex;align-items:center}.map-canvas svg{width:100%;height:auto;display:block;max-height:520px}.map-label{fill:#5d6260;font-family:inherit;font-size:13px}.map-label.strong{fill:#303333;font-weight:600;font-size:16px}.map-label.small{font-size:10px}.map-label.selected{fill:#b1005b;font-weight:600}.map-caption{padding:0 24px 17px;margin:0;font-size:11px;color:#5d6260;max-width:66ch}.map-list{padding:0 24px 18px}.map-list summary{font-size:12px;min-height:28px;cursor:pointer;color:#555b56}.map-list ul{font-size:12px;line-height:1.7;list-style:none;padding:5px 0 0;margin:0}.map-list li{padding:7px 0;border-top:1px solid #d0d3cf}.case-panel{padding:30px 32px 28px;background:white;min-width:0}.case-meta{display:flex;align-items:center;gap:16px;margin-bottom:24px;color:var(--muted);font-size:12px}.case-meta span:last-child{margin-left:auto}.case-panel h1{font-size:27px}.original{border:0;padding:0;margin:23px 0 25px;font-size:19px;line-height:1.55;max-width:45ch}.original p{margin:0}.original cite{display:block;font-size:11px;font-style:normal;color:var(--muted);margin-top:10px}.source-facts{display:flex;gap:25px;flex-wrap:wrap;padding:0;margin:20px 0 27px}.source-facts div{min-width:65px}.source-facts dt{font-size:11px;color:var(--muted);margin:0 0 7px}.source-facts dd{font-size:14px;line-height:1.45;margin:0}.uncertainty{font-size:13px;color:#6c5863;line-height:1.5;margin-bottom:24px}.divider{height:1px;background:var(--line);margin:26px 0}.next-action{margin-top:30px}.next-action h2{font-size:17px;font-weight:500}.actions{display:flex;align-items:center;gap:19px;flex-wrap:wrap;margin-top:20px}.actions .primary{flex:1;min-width:190px}.actions .link{font-size:13px}.case-panel>details{border-top:1px solid var(--line);margin-top:15px;padding-top:0}.case-panel details summary{font-size:12px;min-height:40px;padding:12px 0;cursor:pointer}.case-panel details p,.case-panel details ol{font-size:12px;line-height:1.65;color:var(--muted);margin:2px 0 12px}.case-panel details ol{padding-left:18px}.case-panel .fine{margin-top:23px;margin-bottom:0}.resource-form{display:grid;gap:18px;margin-top:22px}.resource-form label{display:grid;gap:7px;font-size:13px;font-weight:500}.resource-form input,.resource-form select,.resource-form textarea{width:100%;padding:10px 11px;min-height:44px;border:1px solid #d2d3d5;border-radius:5px;background:white;font-size:14px}.resource-form textarea{min-height:75px;resize:vertical;line-height:1.5}.original.compact{font-size:16px;margin:18px 0 20px}.regional-id{font-size:12px;color:var(--muted);margin:0 0 18px}.pair-summary{padding:0;margin:24px 0}.pair-summary div{padding:13px 0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:70px 1fr;gap:14px}.pair-summary dt{font-size:12px;color:var(--muted)}.pair-summary dd{margin:0;font-size:14px;line-height:1.55}.pair-summary dd small{display:block;font-size:11px;color:var(--muted);margin-top:3px}.policy-line{font-size:13px;line-height:1.6;color:#555b56;margin:25px 0}.exception-text{color:var(--error)}.exception-text h2{font-size:18px;margin-bottom:8px}.exception-text p{font-size:14px}.status-title{margin-top:30px}.history-rows{list-style:none;padding:0;margin:0}.history-rows li{border-bottom:1px solid var(--line);padding:12px 0;font-size:12px}.history-rows time{color:var(--muted);display:inline-block;width:75px;font-variant-numeric:tabular-nums}.case-reference{font-size:11px;color:var(--muted);margin-top:24px}
+#workspace.phone{max-width:430px;margin:auto;border-radius:14px;min-height:0}.phone-top{display:flex;align-items:center;justify-content:space-between;padding:22px 24px 17px;border-bottom:1px solid var(--line)}.phone-top strong{font-size:16px;font-weight:600}.phone-top button{font-size:13px}.phone-body{padding:27px 25px 30px;min-height:620px}.phone-body h1{font-size:28px;margin-bottom:24px}.phone-context{font-size:12px;color:var(--muted);margin-bottom:24px}.request-form{display:grid;gap:25px}.request-form label{display:grid;gap:8px;font-size:14px;font-weight:500}.request-form input,.request-form textarea,.request-form select{border:1px solid #d2d3d5;border-radius:5px;background:white;width:100%;min-height:44px;padding:12px;font-size:16px;line-height:1.5}.request-form textarea{min-height:135px;resize:vertical}.people-row{display:flex;align-items:center;justify-content:space-between;gap:16px;font-size:14px;font-weight:500}.stepper{display:flex;align-items:center;gap:22px}.stepper button{width:42px;padding:5px;font-size:20px}.stepper output{min-width:12px;text-align:center}.request-form details summary{min-height:36px;cursor:pointer;font-size:13px;color:var(--muted)}.request-form details select{margin-top:12px}.request-form .primary{width:100%;min-height:48px}.request-form .fine{margin:0}.phone-tabs{padding:11px 22px;display:flex;justify-content:space-around;border-top:1px solid var(--line)}.phone-tabs button{border:0;background:none;font-size:12px;color:var(--muted);padding:7px 14px}.phone-tabs button[aria-current=page]{color:var(--ink);font-weight:600}.phone-status{padding-top:12px}.phone-status h1{line-height:1.3;font-size:27px}.phone-status p{font-size:15px;line-height:1.6}.phone-status .saved-note{font-size:17px;margin:29px 0}.phone-status details{margin-top:24px;border-top:1px solid var(--line)}.phone-status details summary{font-size:13px;padding:14px 0;cursor:pointer}.phone-status details p,.phone-status details ol{font-size:12px;color:var(--muted);line-height:1.7}.phone-status .actions{display:block}.phone-status .primary{width:100%}.phone-status .link{margin-top:12px}.phone-status .fine{font-size:12px;margin-top:24px}.error-message{color:var(--error);font-size:13px;margin:0}.phone-inline{font-size:12px!important;color:var(--muted)}dialog{border:1px solid var(--line);border-radius:10px;max-width:450px;width:calc(100% - 32px);padding:27px;color:var(--ink)}dialog::backdrop{background:rgba(30,42,32,.18)}.dialog-head{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:25px}.dialog-head h2{margin:0;font-size:22px}.dialog-head button{font-size:12px;min-height:34px;padding:7px 10px}dialog summary{font-size:13px;cursor:pointer;padding:12px 0}dialog details p{font-size:13px}dialog .fine{margin-top:20px}
+@media(max-width:1100px){.local-workspace,.regional-workspace{grid-template-columns:minmax(0,1fr) minmax(360px,1fr)}.case-panel{padding:27px 25px}.case-panel h1{font-size:25px}.map-head{padding:21px 20px 0}.map-caption{padding:0 20px 18px}.map-list{padding:0 20px 18px}.source-facts{gap:19px}.original{font-size:18px}}
+@media(max-width:800px){.story-header{padding:20px 20px 14px;flex-wrap:wrap;gap:10px 22px}.story-header p{order:3;width:100%;flex:auto}.story-header>a:last-child{margin-left:auto}.journey-nav{padding:0 20px;grid-template-columns:repeat(3,1fr)}.journey-nav button{padding:10px 5px 12px;font-size:12px}.journey-nav button b{display:inline;margin:0 7px 0 0}main{padding:0 20px}.beat-context{display:block;margin:18px 0 12px}.beat-context span{display:block;font-size:11px;margin-top:6px}#workspace{min-height:0}.local-workspace,.regional-workspace{grid-template-columns:1fr}.map-view{min-height:300px}.map-canvas{min-height:230px;max-height:290px}.map-canvas svg{height:280px}.map-head{padding:17px 20px 0}.map-caption{padding-bottom:12px;font-size:10px}.map-list{padding-bottom:14px}.map-list summary{font-size:11px}.map-label{font-size:13px}.case-panel{padding:27px 25px 30px}.app-top{padding:16px 22px;min-height:59px;gap:15px}.app-top .right{gap:15px}.app-top .place{font-size:12px}.brand{font-size:14px}.case-meta{margin-bottom:22px}.case-panel h1{font-size:27px}.original{font-size:19px}.story-footer{gap:12px}.story-footer p{font-size:11px;text-align:center}.extra-controls{gap:16px}.case-panel>.fine{max-width:65ch}.app-top .right button{min-height:32px}.actions .primary{flex:0 1 auto}}
+@media(max-width:450px){.story-header{padding-inline:15px}.story-title{font-size:14px}.story-header>a:last-child{font-size:11px}.journey-nav{padding-inline:15px}main{padding:0 12px}.journey-nav button{font-size:11px}.beat-context p{font-size:11px}.app-top{flex-wrap:wrap;gap:9px 14px;padding:15px 19px}.app-top .place{font-size:11px}.app-top .right{gap:14px}.case-panel{padding:24px 21px}.case-panel h1{font-size:25px}.case-meta{font-size:11px}.original{font-size:18px}.source-facts{gap:19px}.source-facts dd{font-size:13px}.source-facts dt{font-size:10px}.actions .primary{width:100%;flex:1}.actions .link{font-size:12px}.case-panel details summary{font-size:12px}.map-view{min-height:285px}.map-canvas{min-height:215px;max-height:250px}.map-canvas svg{height:250px}.map-head p{font-size:11px}.map-caption{font-size:10px}.phone-body{padding:26px 22px 28px;min-height:570px}.phone-body h1{font-size:27px}.phone-top{padding-inline:22px}.pair-summary div{grid-template-columns:60px 1fr}.story-footer button{padding:7px 10px}.story-footer p{max-width:150px}.phone-status p{font-size:15px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+#location-dialog label{display:block;font-size:14px;font-weight:500;margin:20px 0 8px}#location-dialog input{width:100%;min-height:44px;padding:11px;border:1px solid var(--line);border-radius:5px;background:white;font:inherit}#location-dialog .primary{min-width:150px}input:disabled,select:disabled,textarea[readonly]{opacity:1;color:var(--ink);-webkit-text-fill-color:var(--ink);background:#fafafa}
+
+</style>
+
+</head>
+<body>
+  <a class="skip" href="#workspace">Skip journey controls</a>
+  <header class="story-header">
+    <a class="story-title" href="../RESCUEMESH.md">One request changing hands</a>
+    <p>Clickable design concept · One synthetic case</p>
+    <a id="reference" href="../rescuemesh-phone.png" target="_blank" rel="noopener">Generated reference</a>
+  </header>
+  <nav class="journey-nav" aria-label="Journey beats" id="beats"></nav>
+  <main>
+    <div class="beat-context"><p id="beat-description"></p><span id="responsibility"></span></div>
+    <section id="workspace" tabindex="-1" aria-label="Application workspace"></section>
+    <footer class="story-footer">
+      <button id="previous" type="button">Previous</button>
+      <p id="story-progress" aria-live="polite"></p>
+      <button id="next" type="button">Next</button>
+    </footer>
+    <details class="story-extras"><summary>Explore the storyboard</summary><div class="extra-controls"><button type="button" id="exception">Show a resource shortage</button><a href="../rescuemesh-oled.png" target="_blank" rel="noopener">Accepted OLED concept</a><a href="../RESCUEMESH.md">Premise and source receipts</a></div><p>Agents automatically process and share this example within the demo policy. Journey controls advance the storyboard, not an approval workflow. This preview calls no model, database, radio or emergency service. Keyboard: Alt and left or right changes beats.</p></details>
+  </main>
+  <dialog id="setup-dialog"><form method="dialog"><div class="dialog-head"><h2>Companion setup</h2><button value="close" aria-label="Close setup">Close</button></div><p>UT Dallas · ECSW</p><p>Companion DEMO is already privately provisioned for this journey.</p><details><summary>Device and privacy details</summary><p>USB supplies power; Bluetooth carries app data. Private profiles and keys are never displayed. Actual provisioning and per-device enrollment need implementation.</p></details><p class="fine">Illustrative setup only. No Bluetooth scan or file import occurs.</p></form></dialog>
+  <dialog id="location-dialog"><form id="location-form"><div class="dialog-head"><h2>Correct the case location</h2><button type="button" data-close-location>Close</button></div><label for="corrected-location">Landmark</label><input id="corrected-location" name="location" maxlength="100" required><p class="fine">This changes the hub case only. The original phone message stays unchanged. A corrected landmark is still approximate, not GPS.</p><button type="submit" class="primary">Save correction</button><p id="location-error" class="error-message" role="alert"></p></form></dialog>
+  <div class="sr-only" id="announcement" role="status" aria-live="polite"></div>
+<script>
+'use strict';
+
+const beats = [
+  {id:'ask',label:'Ask',owner:'Phone · Ask for help',description:'Two people need drinking water near Hoblitzelle.'},
+  {id:'wait',label:'Wait',owner:'Phone · My request',description:'The request stays on the phone while receipt is unconfirmed.'},
+  {id:'understand',label:'Local processing',owner:'ECSW · Local agent',description:'The local agent validates the original fields and prepares a structured case automatically.'},
+  {id:'regional',label:'Automatic coordination',owner:'ECSW · Supervisor connection',description:'Policy-allowed case fields are queued and shared automatically, without a per-case approval gate.'},
+  {id:'coordinate',label:'Regional allocation',owner:'Supervisor · Regional agent',description:'Eligible simulated resources are allocated automatically; people handle exceptions.'},
+  {id:'confirm',label:'Outcome',owner:'ECSW · Coordination update',description:'ECSW receives the accepted-resource update. The phone retains only its actual receipt evidence.'}
+];
+const categoryLabels = {1:'Medical',2:'Fire',3:'Rescue',4:'Safety',5:'Supplies'};
+const severityLabels = {1:'Urgent',2:'Serious',3:'Assistance'};
+const draft = Object.freeze({category:5,severity:3,people:2,note:'Need drinking water. Near Hoblitzelle entrance.'});
+let request = {...draft};
+let current = Math.max(0,beats.findIndex(beat=>beat.id===location.hash.slice(1)));
+let saved = false;
+let receiptConfirmed = false;
+let reviewed = false;
+let regionalQueued = false;
+let processed = false;
+let automationPaused = false;
+let accepted = false;
+let dispatchAcknowledged = false;
+let shortage = false;
+let alternate = false;
+let phoneConfirmation = false;
+let pendingException = false;
+let locationOverride = '';
+let caseRevision = 1;
+let locationUpdatePending = false;
+let lastSharedCase = null;
+let catalogConsulted = false;
+let offerRecorded = false;
+const $ = id=>document.getElementById(id);
+const escape = value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const byteLength = text=>new TextEncoder().encode(text).length;
+const button = (text,action,kind='link')=>`<button type="button" class="${kind}" data-action="${action}">${text}</button>`;
+const details = (title,content)=>`<details><summary>${title}</summary>${content}</details>`;
+const offerTown = ()=>alternate?'Garland':'Plano';
+const requiredKits = 2;
+const seededStock = {Plano:8,Garland:4};
+const availableStock = ()=>shortage&&!alternate?1:seededStock[offerTown()];
+const canAllocate = ()=>availableStock()>=requiredKits;
+const remainingStock = ()=>availableStock()-(accepted?requiredKits:0);
+const caseLocation = ()=>locationOverride||'Near Hoblitzelle entrance';
+const hasMappedLandmark = ()=>/hoblitzelle|\bhh\b/i.test(caseLocation());
+function syncStoryState(index){
+  if(index>=1)saved=true;
+  if(index>=2){receiptConfirmed=true;processed=true;}
+  if(processed&&(index>=3||regionalQueued)&&!automationPaused){
+    if(!lastSharedCase||lastSharedCase.revision!==caseRevision){
+      lastSharedCase=Object.freeze({id:'REG-042',sourceId:'DEMO-042',revision:caseRevision,category:request.category,severity:request.severity,people:request.people,quantity:requiredKits,location:caseLocation(),provenance:locationOverride?'Operator-corrected':'Sender-entered'});
+    }
+    regionalQueued=true;
+    locationUpdatePending=false;
+  }
+  if(index>=4&&lastSharedCase&&!automationPaused){
+    catalogConsulted=true;
+    offerRecorded=true;
+    if(!accepted)accepted=canAllocate();
+  }
+  if(index>=5&&accepted&&!automationPaused)dispatchAcknowledged=true;
+}
+
+function phoneTop(active='Ask for help'){
+  return `<header class="phone-top"><strong>RescueMesh</strong>${button('Setup','setup')}</header><div class="phone-body">`;
+}
+function phoneBottom(active='Ask for help'){
+  return `</div><nav class="phone-tabs" aria-label="Phone sections"><button type="button" data-action="phone-ask" ${active==='Ask for help'?'aria-current="page"':''}>Ask for help</button><button type="button" data-action="phone-request" ${active==='My request'?'aria-current="page"':''}>My request</button></nav>`;
+}
+function askView(){
+  return phoneTop()+`<p class="phone-context">UT Dallas · ECSW · Read-only example</p><h1>Ask for help</h1><form id="request-form" class="request-form"><label>Kind of help<select name="category" id="category" disabled>${Object.entries(categoryLabels).map(([value,label])=>`<option value="${value}" ${Number(value)===draft.category?'selected':''}>${label}</option>`).join('')}</select></label><div class="people-row"><span>People who need help</span><div class="stepper"><button type="button" data-action="fewer" aria-label="One fewer person" disabled>−</button><output id="people" aria-live="polite">${draft.people}</output><button type="button" data-action="more" aria-label="One more person" disabled>+</button></div></div><label>What do you need, and where?<textarea id="note" name="note" aria-describedby="note-help" readonly>${escape(draft.note)}</textarea></label><p class="fine" id="note-help">Fixed synthetic example. Landmark entered by sender; no GPS.</p>${details('Situation',`<label for="severity" class="sr-only">Sender-reported severity</label><select id="severity" name="severity" disabled>${Object.entries(severityLabels).map(([value,label])=>`<option value="${value}" ${Number(value)===draft.severity?'selected':''}>${label}</option>`).join('')}</select><p class="fine">Your reported situation, not an automated assessment.</p>`)}<p id="form-error" class="error-message" role="alert"></p><button type="submit" class="primary">Send request</button><p class="fine">Your request is saved on this phone until a hub confirms receipt.</p></form>`+phoneBottom();
+}
+function deliveryDetails(){
+  return details('Delivery details',`<p>Phone request DEMO-042</p><ol><li>Saved on phone · 21:40:12</li><li>Submitted to radio · 21:41:03</li><li>${receiptConfirmed?'ECSW receipt confirmed · 21:42:18':'ECSW receipt not confirmed'}</li><li>${reviewed?'Operator reviewed · 21:43:07':'Operator review not confirmed'}</li></ol><p>Retry keeps the same request identity and saved payload. Regional allocation is a separate object.</p>`);
+}
+function waitView(final=false){
+  const title=final&&reviewed?'ECSW reviewed your request':receiptConfirmed?'Received by ECSW':'Waiting for ECSW receipt';
+  return phoneTop('My request')+`<section class="phone-status"><p class="phone-context">My request · DEMO-042</p><h1>${title}</h1><p>${final&&reviewed?'An operator has reviewed the request.':receiptConfirmed?'The hub confirmed receipt. Automatic processing is not a human-review receipt.':'Your request is saved. The radio has submitted it, but a hub receipt is not confirmed yet.'}</p><p class="saved-note">${escape(request.note)}</p><p class="phone-inline">${request.people} people · ${escape(categoryLabels[request.category])}<br>Landmark entered by you · No GPS</p>${deliveryDetails()}${!receiptConfirmed?`<div class="actions">${button('Retry same request','retry','primary')}</div><p id="retry-status" class="fine" role="status"></p>`:''}<p class="fine">This phone confirms receipt, not emergency-service dispatch.</p>${final?button('Back to local case','back-confirm'):''}</section>`+phoneBottom('My request');
+}
+function appTop(supervisor=false){
+  return `<header class="app-top"><span class="brand">RescueMesh</span><span class="place">${supervisor?'Regional supervisor':'ECSW · Local hub'}</span><div class="right">${supervisor?button('History','history'):button('Inspect summary','inspect-summary')}${button(automationPaused?'Resume automation':'Pause automation','toggle-automation')}</div></header>`;
+}
+function campusMap(){
+  const mapped=hasMappedLandmark();
+  return `<section class="map-view" aria-label="Offline campus schematic"><div class="map-head"><p><strong>UT Dallas</strong> · Campus schematic</p><p>${locationOverride?'Operator correction':'Manual landmark'}</p></div><div class="map-canvas"><svg viewBox="0 0 650 450" role="img" aria-labelledby="campus-title campus-desc"><title id="campus-title">ECSW and approximate campus landmarks</title><desc id="campus-desc">Public building names on a schematic. ${mapped?'A hatched area represents an unverified Hoblitzelle landmark.':'The corrected landmark is unlocated and has no map marker.'} No GPS, measured range or radio route is shown.</desc><defs><pattern id="landmark-hatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(30)"><path d="M0 0V9" stroke="#d58ab2" stroke-width="2" opacity=".5"/></pattern></defs>
+  <path d="M40 80H600M85 380H590M100 35V420M345 30V425M595 30V425" fill="none" stroke="#f4f4f1" stroke-width="17"/><path d="M40 250H610M485 35V425" fill="none" stroke="#fafaf7" stroke-width="10"/><path d="M103 140H595M170 80V380M100 315H590" fill="none" stroke="#d1d4cf" stroke-width="2"/>
+  ${mapped?'<rect x="195" y="90" width="133" height="135" fill="url(#landmark-hatch)" stroke="#d58ab2" stroke-dasharray="4 5"/>':''}<rect x="215" y="112" width="83" height="62" rx="2" fill="#c9cdc7" stroke="#b3b9af"/><path d="M368 277h97v92h-32v-55h-33v55h-32z" fill="#c3c9bf" stroke="#aab2a6"/><rect x="196" y="279" width="95" height="38" fill="#d0d4ca"/><rect x="393" y="109" width="65" height="91" fill="#d0d4ca"/><rect x="508" y="146" width="61" height="55" fill="#d0d4ca"/><rect x="505" y="290" width="62" height="75" fill="#d0d4ca"/>
+  ${mapped?'<circle cx="309" cy="177" r="7" fill="#E20074"/><text x="185" y="244" class="map-label selected">Reported area · unverified</text>':''}<text x="212" y="72" class="map-label strong">Hoblitzelle · HH</text><text x="376" y="398" class="map-label strong">ECSW</text><text x="374" y="416" class="map-label small">Receiving hub</text><text x="391" y="91" class="map-label">Founders</text><text x="505" y="132" class="map-label">Library</text><text x="206" y="343" class="map-label">ECSS</text></svg></div><p class="map-caption">${mapped?'The hatched area represents an approximate typed landmark, not GPS.':'The corrected landmark is not positioned on this schematic.'} No radio route or coverage boundary is shown.</p><details class="map-list"><summary>Places and unlocated reports</summary><ul><li>ECSW · Physical receiving hub</li><li>${escape(caseLocation())} · ${locationOverride?'Operator-corrected':'Sender-entered'} landmark, ${mapped?'entrance unverified':'unlocated'}</li><li>Unlocated · One other synthetic report has no usable location; it stays in the list.</li></ul></details></section>`;
+}
+function original(){
+  return `<blockquote class="original"><p>“${escape(request.note)}”</p><cite>Original example phone request · DEMO-042</cite></blockquote><dl class="source-facts"><div><dt>People</dt><dd>${request.people}</dd></div><div><dt>Kind of help</dt><dd>${escape(categoryLabels[request.category])}</dd></div><div><dt>Reported situation</dt><dd>${escape(severityLabels[request.severity])}</dd></div></dl><p class="uncertainty">${escape(caseLocation())} · ${locationOverride?'operator-corrected landmark':'entered by the sender'}.<br>Exact position is unverified. No GPS supplied.</p>`;
+}
+function sourceEvidence(){
+  return details('Source and receipt evidence',`<p>Category ${request.category} (${escape(categoryLabels[request.category].toLowerCase())}); severity ${request.severity} (${escape(severityLabels[request.severity].toLowerCase())}); ${request.people} people.</p><p>ECSW receipt: ${receiptConfirmed?'confirmed at 21:42:18':'not confirmed'}. Human review: ${reviewed?'explicitly recorded':'not recorded'}. Automatic agent processing does not create a human-review receipt.</p><p>This is a synthetic scenario. Current firmware tests and actual captured campus reports are separate evidence.</p>`);
+}
+function structuredSummary(){
+  return details('Structured case summary',`<p>REG-042 · Revision ${caseRevision}<br>Need: drinking water for ${request.people} people.<br>Resource: ${requiredKits} water kits.<br>Category: supplies. Sender situation: assistance.<br>Place: ${escape(caseLocation())}. ${locationOverride?'Operator-corrected landmark':'Sender-entered landmark'}; no GPS, exact position unverified.</p><p>Original note remains unchanged. The local agent prepares this structured case and shares only policy-allowed fields automatically.</p>`);
+}
+function processingActivity(){
+  return details('Processing activity',`<ol class="history-rows"><li><time>21:42:18</time>Saved the local report and issued the hub receipt.</li><li><time>21:42:19</time>Validated category, sender severity, people count and note.</li><li><time>21:42:20</time>Prepared structured case REG-042 from the original fields.</li>${regionalQueued?'<li><time>21:42:21</time>Automatically queued and shared policy-allowed fields with the supervisor.</li>':`<li><time>Pending</time>${automationPaused?'Automatic forwarding is paused; the case stays saved.':'Automatic forwarding is the next processing step.'}</li>`}${locationOverride?`<li><time>Revision ${caseRevision}</time>Preserved the original and applied a manual location correction to the hub case.</li>`:''}${accepted?`<li><time>21:44:03</time>Received ${offerTown()}’s simulated acceptance of 2 water kits.</li>`:''}</ol><p>Illustrative agent activity in this design concept. No model, external service or radio is called.</p>`);
+}
+function understandView(){
+  return appTop()+`<div class="local-workspace">${campusMap()}<article class="case-panel"><div class="case-meta"><span>Example local request</span><span>DEMO-042</span></div><h1>Two people need drinking water</h1>${original()}<section class="next-action"><h2>Case prepared automatically</h2><p class="small muted">The local agent validated the source and transformed it into a structured coordination case. ${automationPaused?'Forwarding is paused; the case stays saved.':'Forwarding continues under the configured sharing policy.'}</p><div class="actions">${button('Correct location','correct-location')}</div></section>${structuredSummary()}${processingActivity()}${sourceEvidence()}</article></div>`;
+}
+function regionalView(){
+  return appTop()+`<div class="local-workspace">${campusMap()}<article class="case-panel"><div class="case-meta"><span>Automatic coordination</span><span>REG-042</span></div><h1>${locationUpdatePending?'Location update queued locally':regionalQueued?'Shared with the supervisor':'Automatic forwarding paused'}</h1><blockquote class="original compact"><p>“${escape(request.note)}”</p><cite>Original example phone request · ${request.people} people · No GPS</cite></blockquote><div class="divider"></div><h2>Structured case</h2><dl class="pair-summary"><div><dt>Need</dt><dd>2 water kits for ${request.people} people</dd></div><div><dt>Place</dt><dd>${escape(caseLocation())}<small>${locationOverride?'Operator-corrected':'Sender-entered'} landmark · Exact position unverified</small></dd></div><div><dt>Status</dt><dd>${locationUpdatePending?'Latest correction queued locally':regionalQueued?'Queued and shared automatically':'Saved locally; waiting for automation to resume'}<small>${automationPaused?'New automated actions are paused.':'Policy-allowed fields only. No per-case approval required.'}</small></dd></div></dl><div class="actions">${button('Correct location','correct-location')}</div>${structuredSummary()}${processingActivity()}${details('Sharing scope','<p>Need, people count, original case reference, reported situation and location uncertainty are shared under the configured policy. Raw private notes and hub decryption keys stay local by default.</p>')}<p class="fine">Agent processing is separate from human review. The phone has a hub receipt; no operator-reviewed receipt is fabricated.</p></article></div>`;
+}
+function regionMap(){
+  const to=offerTown();
+  const target=alternate?{x:485,y:290}:{x:409,y:110};
+  const coordinationLine=lastSharedCase&&offerRecorded?`<line x1="282" y1="228" x2="${target.x}" y2="${target.y}" stroke="#E20074" stroke-width="2" stroke-dasharray="5 5"/>`:'';
+  return `<section class="map-view" aria-label="Schematic regional hub context"><div class="map-head"><p><strong>Regional context</strong></p><p>Selected handoff only</p></div><div class="map-canvas"><svg viewBox="0 0 650 450" role="img" aria-labelledby="region-title region-desc"><title id="region-title">Selected ECSW to ${to} simulated coordination</title><desc id="region-desc">Four hubs on a schematic. ECSW is a physical hub; this selected report is synthetic. Plano, Garland and Addison are simulated town hubs with no official agency affiliation. A line, when present, represents a recorded simulated HTTPS case event, not a radio path.</desc><path d="M0 145C150 110 260 185 650 90M85 450C130 320 65 145 210 0M345 450C390 300 335 180 440 0M0 340C190 380 345 295 650 330" fill="none" stroke="#f4f4f1" stroke-width="13"/><path d="M0 245C150 195 350 255 650 185M230 450C310 295 270 170 325 0" fill="none" stroke="#d0d3ce" stroke-width="3"/><path d="M650 420C550 340 570 220 650 185" fill="none" stroke="#e0e4e1" stroke-width="25"/>${coordinationLine}<circle cx="282" cy="228" r="7" fill="#E20074"/><text x="222" y="259" class="map-label strong">ECSW</text><text x="222" y="278" class="map-label small">Physical hub · example report</text><rect x="402" y="103" width="14" height="14" fill="${!alternate?'#E20074':'#abb2aa'}"/><text x="425" y="111" class="map-label strong">Plano · SIM</text><rect x="478" y="283" width="14" height="14" fill="${alternate?'#E20074':'#abb2aa'}"/><text x="502" y="294" class="map-label">Garland · SIM</text><rect x="150" y="301" width="14" height="14" fill="#abb2aa"/><text x="65" y="340" class="map-label">Addison · SIM</text><rect x="298" y="162" width="129" height="25" rx="3" fill="#f5f4f5"/><text x="308" y="179" class="map-label small">HTTPS coordination</text></svg></div><p class="map-caption">Schematic geography. One physical hub and three simulated town hubs; no official town or service affiliation. ${lastSharedCase&&offerRecorded?'The line is a recorded simulated case event, not a measured LoRa route.':'No coordination event is recorded for this offer yet.'}</p><details class="map-list"><summary>All hubs as a list</summary><ul><li>ECSW · Physical hub · example report</li><li>Plano · Simulated hub and resource stock</li><li>Garland · Simulated hub and resource stock</li><li>Addison · Simulated hub and resource stock</li></ul></details></section>`;
+}
+function eventHistory(remote=false){
+  const events=[];
+  if(processed&&(!remote||lastSharedCase))events.push('<li><time>21:42:20</time>ECSW automatically created REG-042 from the source fields.</li>');
+  if(lastSharedCase)events.push(`<li><time>21:42:21</time>Policy-allowed case revision ${lastSharedCase.revision} shared with the supervisor.</li>`);
+  if(lastSharedCase&&catalogConsulted)events.push('<li><time>21:44:01</time>Supervisor consulted the simulated resource catalog.</li>');
+  if(lastSharedCase&&offerRecorded)events.push(`<li><time>21:44:02</time>${offerTown()} ${canAllocate()?'offered 2 simulated water kits':'has only 1 kit available; 2 are required'}.</li>`);
+  if(lastSharedCase&&alternate)events.push('<li><time>Exception</time>An operator selected Garland’s alternate simulated offer.</li>');
+  if(lastSharedCase&&offerRecorded&&accepted)events.push(`<li><time>21:44:03</time>Policy allocated 2 kits automatically; ${remainingStock()} of ${seededStock[offerTown()]} simulated kits remain.</li>`);
+  if(lastSharedCase&&accepted&&dispatchAcknowledged)events.push('<li><time>21:44:05</time>Simulated service acknowledged dispatch. No services contacted.</li>');
+  let pending='';
+  if(remote&&!lastSharedCase)pending='No shared case has reached the supervisor.';
+  else if(!processed)pending='Local validation and case preparation are pending.';
+  else if(!lastSharedCase)pending='Automatic forwarding is pending; no case has reached the supervisor.';
+  else if(!remote&&locationUpdatePending)pending=`The local correction is pending. The supervisor still has revision ${lastSharedCase.revision}.`;
+  else if(!catalogConsulted)pending='Catalog consultation is pending.';
+  else if(!offerRecorded)pending='A resource offer is pending.';
+  else if(!accepted)pending='Allocation is pending; the stock exception remains unresolved.';
+  else if(!dispatchAcknowledged)pending='The simulated dispatch acknowledgment is pending.';
+  return details('Simulated event history',`${events.length?`<ol class="history-rows">${events.join('')}</ol>`:'<p>No completed coordination events yet.</p>'}${pending?`<p><strong>Pending</strong> · ${pending}${automationPaused?' Automation is paused.':''}</p>`:''}<p>Illustrative agent activity. No model, external API or service is called by this storyboard.</p>`);
+}
+function coordinateView(){
+  const shared=lastSharedCase;
+  if(!shared)return appTop(true)+`<div class="regional-workspace">${regionMap()}<article class="case-panel"><div class="case-meta"><span>Supervisor</span><span>No shared case</span></div><h1>Waiting for the local hub</h1><p class="original">No case has reached the supervisor. Local fields and corrections stay at ECSW until automatic sharing can resume.</p>${eventHistory(true)}<p class="fine">No catalog lookup, offer or allocation has completed.</p></article></div>`;
+  const exception=offerRecorded&&!canAllocate();
+  return appTop(true)+`<div class="regional-workspace">${regionMap()}<article class="case-panel"><div class="case-meta"><span>${shared.id} · Revision ${shared.revision}</span><span>Selected request and offer</span></div><h1>${exception?'The water request needs attention':accepted?`${offerTown()} accepted the water request`:'Allocation is paused'}</h1><dl class="pair-summary"><div><dt>Request</dt><dd>${shared.quantity} water kits for ${shared.people} people<small>ECSW · physical hub · example report</small></dd></div><div><dt>Place</dt><dd>${escape(shared.location)}<small>${shared.provenance} landmark · Exact position unverified</small></dd></div><div><dt>Offer</dt><dd>${!offerRecorded?'Not yet requested':exception?'Only 1 kit available; 2 needed':accepted?'2 water kits reserved':'2 water kits available'}<small>${catalogConsulted?`${offerTown()} · Simulated stock · ${remainingStock()} of ${seededStock[offerTown()]} kits remaining`:'Catalog consultation is pending.'}</small></dd></div></dl>${exception?`<section class="exception-text"><h2>${pendingException?'Request kept pending':'Insufficient stock'}</h2><p>Two kits are required; Plano has only one. The case stays saved. An operator can select an alternate simulated offer or keep this exception pending.</p></section><div class="actions">${button('Use Garland’s simulated offer','alternate','primary')}${button('Keep pending','pending')}</div>`:`<p class="policy-line">${automationPaused?'Automation is paused. Any accepted reservation stays recorded.':accepted?'2 kits allocated automatically under the demo policy. No per-case approval is required.':'Waiting for the resource catalog.'}</p>`}${details('Allocation policy',`<p>The shared need is drinking water for ${shared.people} people. Eligible simulated stock is automatically reserved when at least ${shared.quantity} kits are available.${catalogConsulted?` ${offerTown()} has ${availableStock()} simulated kits before this allocation; ${remainingStock()} remain.`:''}</p><p>Missing fields, insufficient stock or an unavailable hub create an exception. No real town authority or responder is represented.</p>`)}${eventHistory(true)}<p class="fine">Only shared revision ${shared.revision} is visible here. All town resources and service dispatch are simulated.</p></article></div>`;
+}
+function confirmView(){
+  if(phoneConfirmation)return waitView(true);
+  const waiting=!accepted;
+  return appTop()+`<div class="local-workspace">${campusMap()}<article class="case-panel"><div class="case-meta"><span>Automatic update at ECSW</span><span>REG-042</span></div><h1>${waiting?'The regional case stays pending':`${offerTown()} accepted the request`}</h1><p class="original">${waiting?'No simulated resource has been allocated. The local source and regional case remain saved.':`2 water kits are reserved for ${request.people} people. The supervisor update returned to ECSW automatically.`}</p><dl class="pair-summary"><div><dt>Source</dt><dd>DEMO-042<small>Original local example report</small></dd></div><div><dt>Regional</dt><dd>REG-042<small>${waiting?'Pending allocation':`${offerTown()} · 2 simulated water kits accepted`}</small></dd></div><div><dt>Dispatch</dt><dd>${dispatchAcknowledged?'Simulated acknowledgment':'Not yet acknowledged'}<small>No emergency services contacted</small></dd></div></dl>${structuredSummary()}${details('What the phone can confirm',`<p>${reviewed?'A human review was explicitly recorded.':'The phone has an ECSW hub-received receipt only. Automatic agent processing does not generate an operator-reviewed receipt.'} Neither confirms regional dispatch, a responder or an arrival time.</p>`)}${processingActivity()}${eventHistory()}<div class="actions">${button('View phone evidence','phone-confirmation')}${button('Correct location','correct-location')}</div><p class="fine">Processing, accepted resources, simulated service events and phone delivery receipts remain distinct. No “help is on the way” message is sent.</p></article></div>`;
+}
+function render(){
+  const beat=beats[current];
+  $('beats').innerHTML=beats.map((item,index)=>`<button type="button" data-beat="${index}" ${current===index?'aria-current="step"':''}><b>${index+1}</b>${item.label}</button>`).join('');
+  $('beat-description').textContent=beat.description;
+  $('responsibility').textContent=phoneConfirmation&&current===5?'Phone · Limited receipt evidence':beat.owner;
+  $('workspace').className=current<=1||(current===5&&phoneConfirmation)?'phone':'';
+  $('workspace').innerHTML=current===0?askView():current===1?waitView():current===2?understandView():current===3?regionalView():current===4?coordinateView():confirmView();
+  $('previous').disabled=current===0;
+  $('next').disabled=current===5;
+  $('story-progress').textContent=`${current+1} of 6 · ${beat.label}`;
+  $('reference').href=current<=1?'../rescuemesh-phone.png':current===4?'../rescuemesh-supervisor.png':'../rescuemesh-ecsw.png';
+  $('exception').textContent=shortage?'Return to available stock':'Show a resource shortage';
+  $('announcement').textContent=`${beat.label}. ${beat.owner}. ${beat.description}`;
+}
+function go(index,focus=true){
+  if(index<0||index>=beats.length)return;
+  current=index;phoneConfirmation=false;syncStoryState(index);
+  history.replaceState(null,'','#'+beats[index].id);
+  render();if(focus)$('workspace').focus({preventScroll:true});
+}
+function openDisclosure(title){
+  let matched=[...$('workspace').querySelectorAll('details')].find(item=>item.querySelector('summary')?.textContent===title);
+  if(!matched&&title==='Source and receipt evidence'){
+    const panel=$('workspace').querySelector('.case-panel');
+    if(panel){panel.insertAdjacentHTML('beforeend',sourceEvidence());matched=[...panel.querySelectorAll('details')].find(item=>item.querySelector('summary')?.textContent===title);}
+  }
+  if(matched){matched.open=!matched.open;matched.querySelector('summary').focus();}
+}
+$('beats').addEventListener('click',event=>{const target=event.target.closest('[data-beat]');if(target)go(Number(target.dataset.beat));});
+$('previous').addEventListener('click',()=>go(current-1));
+$('next').addEventListener('click',()=>go(current+1));
+$('exception').addEventListener('click',()=>{shortage=!shortage;alternate=false;accepted=false;catalogConsulted=false;offerRecorded=false;dispatchAcknowledged=false;pendingException=false;go(4);});
+document.addEventListener('keydown',event=>{if(event.altKey&&['ArrowLeft','ArrowRight'].includes(event.key)){event.preventDefault();go(current+(event.key==='ArrowRight'?1:-1));}});
+window.addEventListener('hashchange',()=>{const index=beats.findIndex(beat=>beat.id===location.hash.slice(1));if(index>=0)go(index,false);});
+$('workspace').addEventListener('submit',event=>{
+  event.preventDefault();
+  if(event.target.id==='request-form'){
+    if(!draft.note.trim()){$('form-error').textContent='Describe what is needed and a nearby landmark, if known.';return;}
+    if(byteLength(draft.note)>120){$('form-error').textContent='Shorten the message to 120 bytes before sending.';return;}
+    request={...draft};saved=true;receiptConfirmed=false;reviewed=false;regionalQueued=false;processed=false;automationPaused=false;locationOverride='';caseRevision=1;locationUpdatePending=false;lastSharedCase=null;catalogConsulted=false;offerRecorded=false;accepted=false;dispatchAcknowledged=false;shortage=false;alternate=false;pendingException=false;go(1);
+  }
+});
+$('location-form').addEventListener('submit',event=>{
+  event.preventDefault();
+  const corrected=$('corrected-location').value.trim();
+  if(!corrected){$('location-error').textContent='Enter a landmark, or close to keep the existing location.';return;}
+  if(corrected!==caseLocation()){locationOverride=corrected;caseRevision+=1;locationUpdatePending=true;}
+  syncStoryState(current);
+  $('location-dialog').close();
+  render();
+});
+$('location-dialog').addEventListener('click',event=>{if(event.target.closest('[data-close-location]'))$('location-dialog').close();});
+$('workspace').addEventListener('click',event=>{
+  const target=event.target.closest('button[data-action]');if(!target)return;
+  const action=target.dataset.action;
+  if(action==='setup')$('setup-dialog').showModal();
+  if(action==='phone-ask')go(0);
+  if(action==='phone-request')go(1);
+  if(action==='retry'){$('retry-status').textContent='Same request DEMO-042 and saved payload submitted again. Receipt is still unconfirmed.';}
+  if(action==='toggle-automation'){automationPaused=!automationPaused;syncStoryState(current);render();}
+  if(action==='correct-location'){$('corrected-location').value=caseLocation();$('location-error').textContent='';$('location-dialog').showModal();$('corrected-location').focus();}
+  if(action==='inspect-summary')openDisclosure('Structured case summary');
+  if(action==='source-details')openDisclosure('Source and receipt evidence');
+  if(action==='phone-receipt'){
+    if(current===5){phoneConfirmation=true;render();}
+    else openDisclosure('Source and receipt evidence');
+  }
+  if(action==='coordinate')go(4);
+  if(action==='history')openDisclosure('Simulated event history');
+  if(action==='policy')openDisclosure('Allocation policy');
+  if(action==='alternate'){alternate=true;accepted=false;catalogConsulted=false;offerRecorded=false;pendingException=false;syncStoryState(current);render();}
+  if(action==='pending'){pendingException=true;render();}
+  if(action==='phone-confirmation'){phoneConfirmation=true;render();}
+  if(action==='back-confirm'){phoneConfirmation=false;render();}
+});
+syncStoryState(current);
+render();
+
+</script>
+</body>
+</html>

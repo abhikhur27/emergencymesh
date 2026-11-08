@@ -1,6 +1,6 @@
 # EmergencyMesh protocol v1
 
-Frozen wire contract for a hackathon prototype, November 7, 2026. No real dispatch integration is enabled.
+Frozen implementation contract, November 7, 2026. Separate from ScrabbleBot and Relay. Hackathon prototype, with no real dispatch integration enabled.
 
 ## Radio envelope
 
@@ -15,8 +15,6 @@ Byte 0 category (1 medical, 2 fire, 3 rescue, 4 safety, 5 supplies); byte 1 user
 Original request origin uint32, original request sequence uint32, status uint8 (1 hub received, 2 operator reviewed), UTF-8 text byte length uint8, text max80 bytes. Hub origin/sequence in envelope are its own IDs, not request IDs. The app accepts only authenticated receipts referencing its known request. No status means emergency services dispatched. Operator-reviewed is a human demo-console action. Duplicate/retried requests should resend the existing receipt without creating another incident. Hub ACK precedes optional local-model summarization.
 
 ## BLE
-
-Only companion firmware exposes the phone service by default, with a role-labelled `EM-Companion-XXXX` name derived from the final two canonical MAC bytes. The hub is a USB serial/LoRa gateway and does not advertise BLE in the default build. An explicitly enabled lab hub BLE mode is outside the standard phone flow.
 
 Nordic UART service `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`; phone writes RX `...0002...` WITH RESPONSE, subscribes TX `...0003...` notifications. Each ATT value max20 bytes: marker0xE1, transferID uint8, chunkIndex uint8 zero-based, chunkCount uint8 (1..14), then1..16 frame bytes. All nonfinal chunks exactly16 bytes. Reassemble indexed chunks for one transfer, bounded220 bytes, expire after5seconds. TransferID only identifies fragmentation, not message identity. Send sequentially, respect write responses. Frames are opaque; app encrypts and hub decrypts. TX carries the same framed encrypted receipt via BLE. Local write completion means submitted to device, never hub receipt. Firmware queues complete frames and reports link/radio problems over serial only; no fake BLE delivery ACK. Retry at10,25,45 seconds, then show unconfirmed and offer explicit retry. Persistent encrypted outbox supports reconnect/relaunch.
 

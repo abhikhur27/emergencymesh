@@ -1,4 +1,4 @@
-# EmergencyMesh radio firmware
+# RescueMesh radio firmware
 
 Three PlatformIO builds for the **standard LILYGO T3 LoRa32 V1.6.1 ESP32/SX1276**. All three share the same protocol and RF profile. This is a bounded hackathon managed-flood prototype; receipt status comes from the authenticated hub/phone protocol, not radio transmit completion.
 
@@ -8,7 +8,24 @@ Three PlatformIO builds for the **standard LILYGO T3 LoRa32 V1.6.1 ESP32/SX1276*
 | `relay` | USB/battery-powered regional repeater | LoRa relay; BLE disabled |
 | `hub` | Laptop gateway | USB serial + LoRa relay; BLE disabled |
 
-The supplied label `868/915MHz LILYGO model LoRa32` matches the SX1276 family. Check the board's **V1.6.1** revision before building for this board. **T3-TCXO, T3-S3, LoRa32 V1.3 and SX1278/433MHz boards need different hardware profiles.** This source profile does not support those variants. The `companion-ble-v2` source has been compiled and tested in software; fresh role-specific builds still need physical device acceptance.
+The supplied label `868/915MHz LILYGO model LoRa32` matches the SX1276 family. Check the board's **V1.6.1** revision before using these images. **T3-TCXO, T3-S3, LoRa32 V1.3 and SX1278/433MHz boards need different hardware profiles.** These releases do not support those variants. The `rescuemesh-oled-v3` release adds the useful courier display without changing the v1 wire format. Its software/hardware verification status is recorded in `verification.json` and each release manifest.
+
+## OLED status
+
+The 128×64 monochrome display uses bold status text and an original little envelope courier. Its feet move while carrying actual queued radio work; the animation does not claim delivery. The role and configured frequency stay in the footer.
+
+| State | Meaning |
+| --- | --- |
+| PAIR PHONE / Open RescueMesh | Companion has no completed phone link yet |
+| PHONE LINKED / Ready to carry | BLE connection and receipt-notification subscription are both active |
+| CARRYING n / Waiting for radio | Actual queued frames; this is not a hub receipt |
+| PHONE LOST / Reconnect phone | A previously ready phone link is no longer ready |
+| ECSW HUB / Listening 915MHz | Hub radio is ready; last accepted RX age is shown or `--` before any reception |
+| PACKET IN / Last RX ns ago | Hub accepted a structurally valid, nonsuppressed radio frame within ten seconds; payload authenticity remains the laptop's job |
+| RELAY READY / Pass it on | Relay listening; PASSING n shows queued forwarding work |
+| RADIO CHECK / Check antenna/power | Radio initialization or receive state failed; this overrides all other scenes |
+
+Queued work takes priority over the companion's pairing/lost-link scene. Only real accepted RX changes the hub's receive clock. Age formatting handles `millis()` rollover and uses seconds, minutes, hours or days for older receptions. There is no invented battery meter, signal quality, delivery receipt or service-dispatch claim. Refreshes are bounded to one per second and skipped during TX or a pending radio event; no animation delays are added to the polling loop.
 
 ## Phone pairing and board roles
 
@@ -16,7 +33,7 @@ Only the **companion** advertises a phone BLE service by default. Choose `EM-Com
 
 The older firmware exposed the same BLE service on both companion and hub, with ambiguous names. Connecting the phone to the hub bypassed the intended companion-to-hub radio path. This release removes that accidental choice. Existing boards keep their old behavior until deliberately reflashed; updating these files does not change a running board.
 
-The public `ready.node` label now uses the final four canonical MAC bytes. The shorter BLE suffix identifies a board for selection; neither label is a security identity or a globally unique guarantee. Encryption/authentication and the v1 radio/BLE wire protocol are unchanged. A private lab can explicitly compile `EM_ENABLE_HUB_BLE=1` to expose an `EM-Hub-XXXX` service, but this opt-in is absent from all supplied default profiles. Use the companion for the standard phone flow.
+The public `ready.node` label now uses the final four canonical MAC bytes. The shorter BLE suffix identifies a board for selection; neither label is a security identity or a globally unique guarantee. Encryption/authentication and the v1 radio/BLE wire protocol are unchanged. A private lab can explicitly compile `EM_ENABLE_HUB_BLE=1` to expose an `EM-Hub-XXXX` service, but this opt-in is absent from all supplied default profiles and release images. Use the companion for the standard phone flow.
 
 ## Build and test
 
@@ -43,7 +60,7 @@ Windows with Visual Studio C++ tools:
 powershell -NoProfile -File scripts/test-native.ps1
 ```
 
-Tests cover companion-only default BLE policy and explicit hub opt-in, canonical MAC identity/name regression cases, bounded name formatting, malformed/type-size/region/key-ID envelopes, hop-only mutations, a three-hop chain, largest-frame indexed BLE reassembly, conflicting and expired fragments, loop suppression with retry recovery, and queue bounds/clock wrap. These checks do not simulate radio propagation or establish BLE interoperability.
+Tests cover companion-only default BLE policy and explicit hub opt-in, canonical MAC identity/name regression cases, bounded name formatting, malformed/type-size/region/key-ID envelopes, hop-only mutations, a three-hop chain, largest-frame indexed BLE reassembly, conflicting and expired fragments, loop suppression with retry recovery, queue bounds/clock wrap, and pure display scene selection including fault/queue priority, role separation, link loss/reconnect and RX age rollover. These checks do not simulate radio propagation or establish physical display appearance/BLE interoperability.
 
 Dependencies are pinned in `platformio.ini`: Espressif32 6.13.0 (Arduino ESP32 2.0.17), NimBLE-Arduino 2.3.7, RadioLib 7.4.0, ArduinoJson 7.4.2, Adafruit SSD1306 2.5.15, GFX 1.13.0 and BusIO 1.17.4. Included dependency source keeps its upstream license in PlatformIO's download cache; source is not copied into this repository.
 
@@ -79,7 +96,7 @@ python -m platformio device monitor --port /dev/cu.usbserial-REPLACE --baud11520
 
 Windows uses a confirmed `COMx` in place of `/dev/cu...`. Use `-e hub` for the laptop gateway or `-e relay` for repeaters. Some boards need BOOT held while RESET is pressed during upload. Remove an SD card before flashing. A charge-only cable powers the board but cannot flash it or bridge USB serial; the hub cable must carry data.
 
-Prebuilt firmware is not distributed in this public repository. For a private local build, images can be exported under ignored `releases/<role>/` with SHA-256 manifests and exact flash offsets. After compiling all three roles, run `powershell -File scripts/export-releases.ps1` on Windows to refresh them. Never reuse manifests from an older build after changing source. Install `python -m pip install esptool==4.11.0` on the flashing machine, then run `powershell -File scripts/flash-release.ps1 -Role companion -Port COM9` or `sh scripts/flash-release.sh companion /dev/cu.usbserial-CONFIRMED`. These helpers verify hashes but do not automatically identify a safe board; replace the example port with the confirmed LoRa USB port.
+Prebuilt images are exported under `releases/<role>/` with a SHA-256 manifest and the exact flash offsets. After compilation run `powershell -File scripts/export-releases.ps1` on Windows to refresh them. Never reuse manifests from an older build after changing source. Install `python -m pip install esptool==4.11.0` on the flashing machine, then run `powershell -File scripts/flash-release.ps1 -Role companion -Port COM9` or `sh scripts/flash-release.sh companion /dev/cu.usbserial-CONFIRMED`. These helpers verify hashes but do not automatically identify a safe board; replace the example port with the confirmed LoRa USB port.
 
 ## Bench check before demonstrating
 

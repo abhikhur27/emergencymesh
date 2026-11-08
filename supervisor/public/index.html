@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#e20074">
+  <title>RescueMesh · Regional coordination</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#workspace">Skip to workspace</a>
+  <section id="login" class="login" hidden>
+    <div class="login-brand">RescueMesh</div>
+    <div class="login-layout">
+      <div class="login-message"><h1>Regional coordination</h1><p>North Texas</p></div>
+      <form id="login-form" class="login-form">
+        <h2>Operator sign in</h2><p class="muted">Open the regional workspace.</p>
+        <label for="username">Operator</label><input id="username" name="username" autocomplete="username" value="operator" required maxlength="80">
+        <label for="password">Password</label><input id="password" name="password" type="password" autocomplete="current-password" required maxlength="256">
+        <label class="check"><input name="remember" type="checkbox" checked> Remember this browser</label>
+        <p id="login-error" class="error" role="alert"></p><button class="primary" type="submit">Sign in</button>
+        <p class="login-footnote">Sign out to revoke this browser’s session.</p>
+      </form>
+    </div><p class="login-disclosure">Emergency service handoffs in this workspace are simulations.</p>
+  </section>
+
+  <div id="application" hidden>
+    <header class="header"><a href="/" class="brand">RescueMesh</a><span class="header-context">North Texas</span><div class="header-right"><span id="connection" class="connection">Connecting</span><button id="signout" class="text-button">Sign out</button></div></header>
+    <main id="workspace" tabindex="-1">
+      <div class="page-top"><div><p class="eyebrow">North Texas</p><h1>Across the region</h1></div><div class="automation"><span id="automation-status">Coordination active</span><button id="pause" class="secondary">Pause coordination</button></div></div>
+      <div class="disclosure"><span class="outline-tag">SIMULATION</span><p>ECSW receives the physical radio hub. Plano, Garland and Addison are simulated. Service handoffs do not contact emergency services.</p></div>
+      <nav class="tabs" aria-label="Workspace"><button data-tab="handoffs" aria-pressed="true">Handoffs <span id="attention-count"></span></button><button data-tab="hubs" aria-pressed="false">Hubs</button><button data-tab="history" aria-pressed="false">History</button><button data-tab="simulation" aria-pressed="false">Simulation</button></nav>
+      <section id="handoffs-panel" class="panel">
+        <div class="coordination-grid">
+          <section class="network" aria-label="Hub connections"><div class="section-label"><h2>Connected hubs</h2><span>HTTPS coordination</span></div><div class="map" id="map"><svg class="roads" viewBox="0 0 600 360" aria-hidden="true"><path d="M-30 280 80 215 210 225 320 150 650 170 M40 -20 100 100 210 225 235 400 M360 -20 320 150 390 280 650 330 M-30 50 100 100 320 150 650 40"/><path class="highway" d="M-20 330 100 250 210 225 320 150 350 -10"/></svg><svg class="link-layer" viewBox="0 0 600 360" aria-hidden="true"><path id="selected-link" d=""/></svg><button class="map-node ecsw" data-hub="ecsw"><span class="node-dot real"></span><strong>ECSW</strong><span class="node-caption">Radio hub</span></button><button class="map-node plano" data-hub="plano"><span class="node-dot"></span><strong>Plano</strong><span class="node-caption">Simulated</span></button><button class="map-node garland" data-hub="garland"><span class="node-dot"></span><strong>Garland</strong><span class="node-caption">Simulated</span></button><button class="map-node addison" data-hub="addison"><span class="node-dot"></span><strong>Addison</strong><span class="node-caption">Simulated</span></button><span class="map-caption">Connection diagram · not a radio coverage map</span></div><div class="map-footer"><span><i class="legend-dot"></i> Physical hub</span><span><i class="legend-dot simulated"></i> Simulated town</span><span id="map-relation">Select a handoff to see its connection</span></div></section>
+          <section id="case-detail" class="case-detail" aria-label="Selected handoff"></section>
+        </div>
+        <section class="requests"><div class="list-heading"><h2>Current handoffs</h2><label class="compact-label">From <select id="source-filter"><option value="all">All hubs</option><option value="ecsw">ECSW</option><option value="plano">Plano · simulated</option><option value="garland">Garland · simulated</option><option value="addison">Addison · simulated</option></select></label></div><div id="case-list" class="case-list"></div></section>
+      </section>
+      <section id="hubs-panel" class="panel" hidden><div class="section-intro"><h2>The regional network</h2><p>Available resources belong to the simulated town catalog. No vehicle availability is represented as live.</p></div><div id="hub-list"></div></section>
+      <section id="history-panel" class="panel" hidden><div class="section-intro"><h2>Coordination history</h2><p>Events appear after each completed stage. Select a row to return to its handoff.</p></div><div id="history-list"></div></section>
+      <section id="simulation-panel" class="panel" hidden><div class="simulation-layout"><div><p class="eyebrow">Separate from ECSW intake</p><h2>Three towns.<br>One bounded exercise.</h2><p class="muted">Generate requests from Plano, Garland and Addison. Each request uses the same validation, inventory and simulated service adapter as incoming ECSW requests.</p><p id="simulation-status" class="simulation-status"></p><div class="sim-actions"><button id="simulation-toggle" class="primary">Start town intake</button><button id="simulation-step" class="secondary">Generate one request</button></div><details class="reset-details"><summary>Reset the town exercise</summary><p>Archive internally generated town requests and release their simulated reservations. ECSW requests and their reservations stay in place.</p><button id="simulation-reset" class="secondary">Reset simulated town intake</button></details></div><div class="simulation-notes"><h3>What runs automatically</h3><ol><li>Validate source fields and location</li><li>Query the simulated resource catalog</li><li>Propose an eligible town allocation</li><li>Reserve available resources once</li><li>Acknowledge a simulated service handoff</li><li>Publish the outcome back to the source hub</li></ol><p>Missing information and unavailable resources remain visible for an operator. Priority and people counts come from the source.</p></div></div></section>
+      <details class="system-details"><summary>System details</summary><div id="system-status"></div></details>
+    </main><footer class="footer"><span>RescueMesh</span><span>Local requests. Regional coordination.</span><span>No emergency service affiliation</span></footer>
+  </div><div id="notice" class="notice" role="status" aria-live="polite" hidden></div>
+</body>
+</html>

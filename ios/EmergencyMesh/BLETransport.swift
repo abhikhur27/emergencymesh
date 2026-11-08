@@ -3,7 +3,7 @@ import CoreBluetooth
 import Combine
 
 final class BLETransport: NSObject, ObservableObject, CBCentralManagerDelegate, CBPeripheralDelegate {
-    struct Device: Identifiable { let peripheral: CBPeripheral; let rssi: Int; var id: UUID { peripheral.identifier }; var name: String { peripheral.name ?? "EmergencyMesh radio" } }
+    struct Device: Identifiable { let peripheral: CBPeripheral; let rssi: Int; var id: UUID { peripheral.identifier }; var name: String { peripheral.name ?? "RescueMesh companion" } }
     static let serviceID = CBUUID(string: "6E400001-B5A3-F393-E0A9-E50E24DCCA9E")
     static let writeID = CBUUID(string: "6E400002-B5A3-F393-E0A9-E50E24DCCA9E")
     static let notifyID = CBUUID(string: "6E400003-B5A3-F393-E0A9-E50E24DCCA9E")

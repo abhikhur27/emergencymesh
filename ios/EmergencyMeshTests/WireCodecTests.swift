@@ -93,4 +93,51 @@ final class WireCodecTests: XCTestCase {
         XCTAssertEqual(protectedCounter, previous)
         XCTAssertEqual(try reserve(), 4)
     }
+    func testSiblingDeviceCannotReadRequestOrHubReceipt() throws {
+        let sibling = ProvisioningProfile(region: profile.region, keyId: profile.keyId, keyHex: String(repeating: "22", count: 32), origin: 0x22222222)
+        let frame = try WireCodec.seal(type: 1, plaintext: request(), profile: profile, sequence: 42)
+        XCTAssertThrowsError(try WireCodec.open(frame, profile: sibling, expectedType: 1))
+        let fixture = try fixture()
+        let receipt = try XCTUnwrap(Data(hex: try XCTUnwrap(fixture["receiptFrameHex"] as? String)))
+        XCTAssertThrowsError(try WireCodec.receipt(receipt, profile: sibling))
+        XCTAssertEqual(try WireCodec.receipt(receipt, profile: profile).requestOrigin, profile.origin)
+    }
+    func testReceiptRecipientIsCheckedEvenForExplicitLegacySharedKeys() throws {
+        let hub = ProvisioningProfile(region: profile.region, keyId: profile.keyId, keyHex: key, origin: 0x99999999)
+        func receipt(origin: UInt32, sequence: UInt32) throws -> Data {
+            var payload = Data(); payload.appendLE(origin); payload.appendLE(sequence)
+            payload.append(contentsOf: [1, 0])
+            return try WireCodec.seal(type: 2, plaintext: payload, profile: hub, sequence: 77)
+        }
+        XCTAssertThrowsError(try WireCodec.receipt(receipt(origin: 0x22222222, sequence: 42), profile: profile))
+        XCTAssertThrowsError(try WireCodec.receipt(receipt(origin: profile.origin, sequence: 0), profile: profile))
+        var valid = try receipt(origin: profile.origin, sequence: 42)
+        valid[14] = 0 // Opaque relays may consume the hop count on the return path too.
+        XCTAssertEqual(try WireCodec.receipt(valid, profile: profile).hubOrigin, hub.origin)
+    }
+    func testVisibleOriginAndKeySlotAreAuthenticated() throws {
+        let frame = try WireCodec.seal(type: 1, plaintext: request(), profile: profile, sequence: 42)
+        var changedOrigin = frame; changedOrigin[6] ^= 1
+        XCTAssertThrowsError(try WireCodec.open(changedOrigin, profile: profile, expectedType: 1))
+        var changedSlot = frame; changedSlot[15] = 2
+        let changedProfile = ProvisioningProfile(region: profile.region, keyId: 2, keyHex: key, origin: profile.origin)
+        XCTAssertThrowsError(try WireCodec.open(changedSlot, profile: changedProfile, expectedType: 1))
+        let fingerprintProfile = ProvisioningProfile(region: profile.region, keyId: profile.keyId, keyHex: profile.keyFingerprint, origin: profile.origin)
+        XCTAssertEqual(profile.keyFingerprint.count, 64)
+        XCTAssertNotEqual(profile.keyFingerprint, key)
+        XCTAssertThrowsError(try WireCodec.open(frame, profile: fingerprintProfile, expectedType: 1))
+    }
+    func testSavedOutboxRetainsTheOriginalFrameForRetries() throws {
+        let date = Date(timeIntervalSince1970: 1794000000)
+        var draft = RequestDraft(); draft.note = String(repeating: "a", count: 120)
+        let plaintext = try WireCodec.requestPlaintext(draft: draft, location: nil, battery: 255, createdAt: date)
+        let frame = try WireCodec.seal(type: 1, plaintext: plaintext, profile: profile, sequence: 42)
+        XCTAssertEqual(frame.count, 184); XCTAssertLessThanOrEqual(frame.count, WireCodec.maxFrame)
+        var snapshot = AppSnapshot()
+        snapshot.outbox.append(OutboxItem(origin: profile.origin, sequence: 42, createdAt: date, draft: draft, location: nil, frame: frame))
+        let restored = try JSONDecoder().decode(AppSnapshot.self, from: JSONEncoder().encode(snapshot))
+        XCTAssertEqual(restored.outbox.first?.frame, frame)
+        XCTAssertEqual(restored.outbox.first?.sequence, 42)
+        XCTAssertEqual(try WireCodec.open(try XCTUnwrap(restored.outbox.first?.frame), profile: profile, expectedType: 1), plaintext)
+    }
 }

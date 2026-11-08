@@ -1,4 +1,5 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
+import { hasDeviceKeyring, resolveDeviceKey } from './device-keyring.mjs';
 
 export const MAX_FRAME_BYTES = 220;
 const decoder = new TextDecoder('utf-8', { fatal: true });
@@ -155,8 +156,16 @@ function parseReceipt(payload) {
 /** Authenticate first, then return validated semantic content. Never use inspectEnvelope as authentication. */
 export function decodeFrame(value, profile) {
   const header = inspectEnvelope(value);
-  if (!profile || header.region !== profile.region || header.keyId !== profile.keyId) fail('Unknown region or key ID', 'UNKNOWN_PROFILE');
-  const key = bytes(profile.key, 32, 'key');
+  if (!profile || header.region !== profile.region) fail('Unknown region or key ID', 'UNKNOWN_PROFILE');
+  let key;
+  if (hasDeviceKeyring(profile)) {
+    // A receipt's visible origin is the hub, not its recipient. Decode receipts using the recipient's explicit profile.
+    if (header.type !== 1) fail('Receipt decoding requires an explicit recipient profile', 'UNKNOWN_PROFILE');
+    key = resolveDeviceKey(profile, header.origin, header.keyId);
+  } else {
+    if (header.keyId !== profile.keyId) fail('Unknown region or key ID', 'UNKNOWN_PROFILE');
+    key = bytes(profile.key ?? (typeof profile.keyHex === 'string' && /^[0-9a-f]{64}$/i.test(profile.keyHex) ? Buffer.from(profile.keyHex, 'hex') : undefined), 32, 'key');
+  }
   const frame = Buffer.from(value);
   let plaintext;
   try {

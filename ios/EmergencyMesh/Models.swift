@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 enum MeshError: LocalizedError {
     case invalid(String)
@@ -11,6 +12,7 @@ struct ProvisioningProfile: Codable, Equatable {
     let keyHex: String
     let origin: UInt32
     var keyData: Data { Data(hex: keyHex) ?? Data() }
+    var keyFingerprint: String { SHA256.hash(data: keyData).map { String(format: "%02x", $0) }.joined() }
     func validate() throws {
         guard region > 0, keyId > 0, origin > 0, keyData.count == 32 else {
             throw MeshError.invalid("Profile needs region, keyId, nonzero origin and a 64-character hexadecimal key.")
@@ -57,10 +59,10 @@ struct LocationFix: Codable, Equatable {
 enum DeliveryStatus: String, Codable {
     case queued, submitted, unconfirmed, hubReceived, operatorReviewed
     var title: String { switch self {
-        case .queued: return "Queued on phone"
-        case .submitted: return "Submitted to radio device"
+        case .queued: return "Saved on your phone"
+        case .submitted: return "Waiting for the hub"
         case .unconfirmed: return "Delivery unconfirmed"
-        case .hubReceived: return "Hub received"
+        case .hubReceived: return "Received by the hub"
         case .operatorReviewed: return "Operator reviewed"
     } }
     var confirmed: Bool { self == .hubReceived || self == .operatorReviewed }

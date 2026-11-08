@@ -32,7 +32,7 @@ test('local API requires auth, strict Host/Origin and CSRF; export is human-revi
   const simulated = await fetch(`${origin}/api/simulate`, { method: 'POST', headers, body: '{}' }); assert.equal(simulated.status, 201); const { id } = await simulated.json();
   assert.equal(core.list().length, 1); assert.equal(core.list()[0].simulated, true);
   assert.equal((await fetch(`${origin}/api/incidents/${id}/export`, { method: 'POST', headers, body: '{}' })).status, 409);
-  assert.equal((await fetch(`${origin}/api/incidents/${id}/review`, { method: 'POST', headers, body: '{}' })).status, 200);
+  assert.equal((await fetch(`${origin}/api/incidents/${encodeURIComponent(id)}/review`, { method: 'POST', headers, body: '{}' })).status, 200);
   const exported = await (await fetch(`${origin}/api/incidents/${id}/export`, { method: 'POST', headers, body: '{}' })).json(); assert.equal(exported.servicesContacted, false); assert.equal(exported.simulation, true); assert.ok(exported.incident.request.note);
   const state = await (await fetch(`${origin}/api/state`, { headers: { Cookie: cookie } })).json(); assert.equal(state.incidents.length, 1); assert.equal(JSON.stringify(state).includes('keyHex'), false); assert.equal('receipt' in state.incidents[0], false);
   const index = await fetch(origin); assert.match(index.headers.get('content-security-policy'), /frame-ancestors 'none'/); assert.equal(index.headers.get('referrer-policy'), 'no-referrer');

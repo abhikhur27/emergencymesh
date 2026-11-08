@@ -8,6 +8,7 @@ import { IncidentStore } from '../src/store.mjs';
 import { HubCore } from '../src/core.mjs';
 import { encodeRequest, decodeFrame } from '../src/codec.mjs';
 import { simulatedRequest } from '../src/simulation.mjs';
+import { createDeviceProfile, revokeDevice } from '../src/device-keyring.mjs';
 
 const now = 1794000000000;
 async function fixture(t, extra = {}) {
@@ -55,6 +56,15 @@ test('ACK precedes optional inference; model cannot change original reported fac
   const events = []; const f = await fixture(t, { ai: true, summarize: async request => { events.push('model'); assert.equal(request.people, 2); return { text: 'Validated source selection', source: 'local-model', model: 'test', needsReview: true }; }, transmit: async () => events.push('ack') });
   await f.core.ingest(f.frame); await f.core.summaryQueue.idle();
   assert.deepEqual(events, ['ack', 'model']); assert.equal(f.core.list()[0].request.people, 2); assert.equal(f.core.list()[0].request.severity, 2);
+});
+test('hub core decrypts by enrolled device identity and encrypts each receipt only for its originating phone', async t => {
+  const f = await fixture(t); const { profile: a } = createDeviceProfile(f.config); const { profile: b } = createDeviceProfile(f.config);
+  const frame = encodeRequest(simulatedRequest(now), { region: 1, keyId: a.keyId, origin: a.origin, sequence: 9, hops: 3 }, Buffer.from(a.keyHex, 'hex'));
+  const { id } = await f.core.ingest(frame); assert.equal(f.store.get(id).keyId, a.keyId);
+  const receipt = decodeFrame(f.sent[0], a); assert.equal(receipt.receipt.requestOrigin, a.origin); assert.equal(receipt.header.origin, f.config.hubOrigin);
+  assert.throws(() => decodeFrame(f.sent[0], b), /Authentication/);
+  assert.equal((await f.core.ingest(f.sent[0])).ignored, true);
+  revokeDevice(f.config, a.origin, a.keyId); await assert.rejects(f.core.ingest(frame), /revoked/); assert.equal(f.sent.length, 1);
 });
 test('storage failure does not acknowledge unsaved incident or consume identity', async t => {
   const f = await fixture(t); const persist = f.store.persist.bind(f.store); f.store.persist = async () => { throw new Error('disk full'); };

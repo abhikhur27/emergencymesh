@@ -30,3 +30,19 @@ firmware/releases/
 docs/receipts/
 *.FCStd1
 *.FCStd2
+
+# RescueMesh source-only export boundary
+**/.supervisor*/
+**/.private/
+**/runtime/
+**/logs/
+**/profiles/
+**/raw-radio/
+**/deploy/receipts/
+**/ecsw-hub-token*
+**/device-registry*.json
+**/operator-auth*.json
+**/identity-store*.json
+**/runtime.json
+**/bridge.json
+!**/.env.example

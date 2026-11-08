@@ -1,4 +1,10 @@
-# Request screen target
+# RescueMesh phone flow
+
+Current reference: `rescuemesh-phone.png`, 1670×941 pixels. It was generated earlier in this project and inspected before the current SwiftUI update. The three panels describe category selection, review/send and authenticated receipt. The native implementation uses semantic system typography and backgrounds, restrained magenta `#E20074`, scalable rows, separate details/review screens, and a disclosure for transport details. My requests and Setup remain accessible as native peer tabs. User-entered notes and actual GPS are the only location sources; a mockup's example landmark is never seeded into real requests.
+
+No Xcode runtime is available on this Windows host. Source parsing and project/plist checks do not establish visual fidelity, accessibility behavior or successful native compilation. Run the Mac instructions in `../README.md`, then compare a real simulator/device capture with this reference. The image is a conceptual three-panel presentation, not a flattened screen asset or an exact simulator viewport.
+
+## Historical first target
 
 Generated using the built-in imagegen tool before any SwiftUI interface code, then inspected at full context. Saved target: `request-target.png`, actual798×1972pixels. Intended reference is an iPhone portrait request screen with native system safe areas, warm white background, dark navy type and restrained orange actions. Exact device/scale cannot be inferred from generated pixels; no native capture or1:1 comparison is claimed.
 

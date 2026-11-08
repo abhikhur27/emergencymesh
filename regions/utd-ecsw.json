@@ -1,0 +1,27 @@
+{
+  "schema": "rescuemesh.region.v1",
+  "version": 1,
+  "region": 1,
+  "regionId": 1,
+  "keyId": 1,
+  "name": "UT Dallas",
+  "hubId": "ecsw",
+  "hubName": "ECSW",
+  "timeZone": "America/Chicago",
+  "frequencyMHz": 915,
+  "mapKind": "schematic",
+  "mapNotice": "Public landmarks for context. Typed locations are unverified; this is not a GPS survey, radio coverage map or relay route.",
+  "sources": ["https://calendar.utdallas.edu/ecsw", "https://services.utdallas.edu/download/Parking_Map.pdf"],
+  "landmarks": [
+    {"id":"ECSW","name":"Engineering and Computer Science West","shortName":"ECSW","aliases":["ecsw","engineering west","ecs west"],"mapX":65,"mapY":72},
+    {"id":"HH","name":"Karl Hoblitzelle Hall","shortName":"Hoblitzelle","aliases":["hoblitzelle","hoblitzelle hall","hh"],"mapX":35,"mapY":31},
+    {"id":"ECSN","name":"Engineering and Computer Science North","shortName":"ECSN","aliases":["ecsn","engineering north"],"mapX":65,"mapY":45},
+    {"id":"ECSS","name":"Engineering and Computer Science South","shortName":"ECSS","aliases":["ecss","engineering south"],"mapX":65,"mapY":61},
+    {"id":"FO","name":"Founders Building","shortName":"Founders","aliases":["founders","founders building"],"mapX":35,"mapY":12},
+    {"id":"MC","name":"Eugene McDermott Library","shortName":"Library","aliases":["mcdermott","mcdermott library","library"],"mapX":85,"mapY":46},
+    {"id":"SU","name":"Student Union","shortName":"Student Union","aliases":["student union","su"],"mapX":78,"mapY":59},
+    {"id":"PS4","name":"Parking Structure 4","shortName":"PS4","aliases":["parking structure 4","ps4"],"mapX":48,"mapY":73}
+  ],
+  "resourceTypes": ["water", "supplies", "medical", "fire", "rescue", "safety"],
+  "resourceNotice": "Resource quantities and service dispatch in the regional demonstration are simulated. No real agency availability is asserted."
+}

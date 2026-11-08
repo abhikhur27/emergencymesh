@@ -10,7 +10,7 @@ $devcmd = Join-Path $installation 'Common7/Tools/VsDevCmd.bat'
 $envLines = & $env:ComSpec /d /c "call `"$devcmd`" -no_logo -arch=x64 >nul && set"
 if ($LASTEXITCODE -ne 0) { throw 'C++ environment setup failed.' }
 foreach ($line in $envLines) { if ($line -match '^([^=]+)=(.*)$') { [Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process') } }
-foreach ($test in @('protocol', 'device_identity')) {
+foreach ($test in @('protocol', 'device_identity', 'status_screen')) {
   & cl.exe /nologo /EHsc /std:c++17 /W4 /WX "/I$project/include" "$project/test/test_$test.cpp" "/Fo$output/$test.obj" "/Fe$output/$test-tests.exe"
   if ($LASTEXITCODE -ne 0) { throw "Native $test test compilation failed." }
   & "$output/$test-tests.exe"

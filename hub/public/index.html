@@ -1,19 +1,56 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>EmergencyMesh · Demo dispatch</title><link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script></head>
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="theme-color" content="#E20074">
+  <title>RescueMesh · ECSW</title>
+  <link rel="stylesheet" href="/style.css"><script type="module" src="/app.js"></script>
+</head>
 <body>
-  <header><div class="wordmark"><span class="mark" aria-hidden="true">+</span> EmergencyMesh</div><div class="demo-label">DEMO DISPATCH · NO SERVICES CONNECTED</div><button id="logout" class="quiet" hidden>Sign out</button></header>
+  <a class="skip" href="#content">Skip to current view</a>
+  <header class="app-header">
+    <a class="wordmark" href="#requests">RescueMesh</a><span class="hub-context" id="hub-context">ECSW · UT Dallas</span>
+    <nav id="navigation" aria-label="Hub views" hidden>
+      <button type="button" data-view="requests" aria-current="page">Local requests</button><button type="button" data-view="handoffs">Regional handoffs</button><button type="button" data-view="reception">Reception study</button><button type="button" data-view="settings">Settings</button>
+    </nav>
+    <button id="pause" type="button" class="text-action" hidden>Pause automation</button>
+  </header>
   <main id="login-panel" class="login">
-    <span class="eyebrow">LOCAL OPERATOR CONSOLE</span><h1>Open the incident desk.</h1><p>Enter the access code saved in <code>.emergency/operator-token.txt</code> on the hub laptop.</p>
-    <form id="login-form"><label for="token">Operator access code</label><input id="token" type="password" autocomplete="off" spellcheck="false" required><button class="primary" type="submit">Open console</button></form>
-    <p class="muted">Access stays on this laptop. Reports are stored locally.</p>
+    <h1>ECSW incident desk</h1><p id="login-region" class="login-context">UT Dallas</p>
+    <form id="login-form">
+      <div class="field"><label for="username">Operator</label><input id="username" name="username" autocomplete="username" value="operator" required></div>
+      <div class="field"><label for="token">Password</label><input id="token" name="password" type="password" autocomplete="current-password" required></div>
+      <label class="check"><input id="remember" type="checkbox" checked> Remember this browser</label><button class="primary" type="submit" data-mutation="true">Sign in</button>
+    </form>
+    <p class="muted">Your region setup stays on this hub.</p>
+    <details class="login-help"><summary>Access help</summary><p>Use the operator credential created on this laptop. The private access-code file is <code>.emergency/operator-token.txt</code>. A saved browser session can be revoked by signing out.</p></details>
   </main>
   <div id="workspace" hidden>
-    <section class="statusbar" aria-label="Hub connection"><span id="link">Disconnected</span><span id="region"></span><span id="model"></span><button id="simulate" class="quiet" hidden>Send test report</button></section>
-    <main class="desk">
-      <section class="queue" aria-labelledby="queue-heading"><div class="queue-title"><h1 id="queue-heading">Reports</h1><span id="count">0</span></div><label class="filter-label" for="filter">Show</label><select id="filter"><option value="all">All reports</option><option value="unreviewed">Awaiting review</option><option value="reviewed">Reviewed</option></select><div id="incident-list"></div></section>
-      <section id="detail" class="detail" aria-label="Selected report"><div class="empty"><span class="cross" aria-hidden="true">+</span><h2>Waiting for a report</h2><p>Authenticated requests appear here when the hub receives them.</p><p class="muted">A received report does not mean emergency services were contacted.</p></div></section>
+    <section class="connection-strip" aria-label="Current connection"><span id="link">Checking radio connection</span><span id="connection-note"></span><button id="simulate" type="button" class="text-action" hidden>Send test report</button></section>
+    <main id="content" tabindex="-1">
+      <section id="requests-view" class="view" aria-label="Local requests">
+        <div class="local-desk"><div class="place-work">
+          <section id="map" class="map" aria-label="Campus context"></section>
+          <section class="queue" aria-labelledby="queue-heading">
+            <div class="queue-head"><h1 id="queue-heading">Incoming</h1><span id="count"></span></div>
+            <div class="queue-filters">
+              <label>Source<select id="source"><option value="radio">Radio reports</option><option value="all">All sources</option><option value="test">Test reports</option></select></label>
+              <label>Show<select id="filter"><option value="all">All reports</option><option value="unreviewed">Not human-reviewed</option><option value="reviewed">Human-reviewed</option></select></label>
+            </div><div id="incident-list" class="incident-list"></div>
+          </section>
+        </div><article id="detail" class="detail" aria-label="Selected original request"></article></div>
+      </section>
+      <section id="handoffs-view" class="view page-view" aria-label="Regional handoffs" hidden></section>
+      <section id="reception-view" class="view page-view" aria-label="Campus reception evidence" hidden></section>
+      <section id="settings-view" class="view page-view" aria-label="Hub settings" hidden></section>
     </main>
+    <footer class="app-footer"><span>Emergency-service dispatch is simulated.</span><button id="logout" class="text-action" type="button">Sign out</button></footer>
   </div>
-  <p id="error" class="error" role="alert" hidden></p><p id="notice" class="sr-only" aria-live="polite"></p>
-</body></html>
+  <dialog id="location-dialog" aria-labelledby="location-heading">
+    <form id="location-form"><div class="dialog-head"><h2 id="location-heading">Correct the case location</h2><button id="close-location" type="button" class="text-action" aria-label="Close location correction">Close</button></div>
+      <label for="location-label">Landmark</label><input id="location-label" maxlength="120" list="landmark-names" required autocomplete="off"><datalist id="landmark-names"></datalist>
+      <p class="muted">This adds a case correction. The original phone message stays unchanged. A landmark is approximate, not a GPS fix.</p><button class="primary" type="submit" data-mutation="true">Save correction</button>
+    </form>
+  </dialog>
+  <p id="error" class="error" role="alert" hidden></p><p id="notice" class="notice" role="status" aria-live="polite" hidden></p>
+</body>
+</html>

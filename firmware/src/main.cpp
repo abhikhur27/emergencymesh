@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <ArduinoJson.h>
 #include <Adafruit_SSD1306.h>
+#include <Fonts/FreeSansBold9pt7b.h>
 #include <RadioLib.h>
 #include <NimBLEDevice.h>
 #include <SPI.h>
@@ -12,6 +13,7 @@
 #include <atomic>
 #include "mesh_protocol.h"
 #include "device_identity.h"
+#include "status_screen.h"
 
 #ifndef EM_ROLE
 #define EM_ROLE 1
@@ -53,6 +55,7 @@ QueueHandle_t bleInput = nullptr;
 NimBLECharacteristic* txCharacteristic = nullptr;
 std::atomic<bool> bleConnected{false};
 std::atomic<bool> bleSubscribed{false};
+std::atomic<bool> hadPhoneLink{false};
 std::atomic<uint32_t> bleErrors{0};
 Adafruit_SSD1306 display(128, 64, &Wire, -1);
 SX1276 radio = new Module(18, 26, 23, 33);
@@ -61,6 +64,8 @@ volatile bool radioEvent = false;
 uint32_t txStarted = 0, lastTx = 0, txWindowStart = 0, lastDisplay = 0;
 uint16_t txWindowCount = 0;
 uint32_t rxCount = 0, txCount = 0, dropCount = 0;
+uint32_t lastAcceptedRx = 0;
+bool hasAcceptedRx = false;
 uint32_t nodeId = 0;
 Frame bleSending{};
 uint8_t bleTransfer = 0, bleChunk = 0;
@@ -176,7 +181,9 @@ class RxCallbacks : public NimBLECharacteristicCallbacks {
 
 class TxCallbacks : public NimBLECharacteristicCallbacks {
   void onSubscribe(NimBLECharacteristic*, NimBLEConnInfo&, uint16_t value) override {
-    bleSubscribed.store((value & 1) != 0);
+    const bool subscribed = (value & 1) != 0;
+    bleSubscribed.store(subscribed);
+    if (subscribed && bleConnected.load()) hadPhoneLink.store(true);
   }
 } txCallbacks;
 
@@ -280,6 +287,7 @@ void pollRadio() {
       ++dropCount;
     } else if (seen.admit(frame, now)) {
       ++rxCount;
+      lastAcceptedRx = now; hasAcceptedRx = true;
       if (IsHub) emitRx(frame, static_cast<int>(rssi), snr);
       queueReceiptBle(frame);
       if (em::decrementHops(frame)) {
@@ -303,17 +311,86 @@ void pollRadio() {
   digitalWrite(LedPin, HIGH);
 }
 
+void drawCourier(em::StatusScene scene, uint32_t now) {
+  // Original 1-bit envelope courier. Animation changes its feet, never delivery state.
+  const int16_t x = 8, y = 32;
+  display.drawRect(x, y, 30, 17, SSD1306_WHITE);
+  display.drawLine(x + 1, y + 1, x + 15, y + 9, SSD1306_WHITE);
+  display.drawLine(x + 15, y + 9, x + 28, y + 1, SSD1306_WHITE);
+  const bool walking = scene == em::StatusScene::Carrying || scene == em::StatusScene::RelayCarrying;
+  const int16_t step = walking && (now / 1000U) % 2U ? 1 : 0;
+  display.drawLine(x + 8, y + 17, x + 7 - step, y + 20, SSD1306_WHITE);
+  display.drawLine(x + 22, y + 17, x + 23 + step, y + 20, SSD1306_WHITE);
+  display.drawFastHLine(x + 4 - step, y + 20, 5, SSD1306_WHITE);
+  display.drawFastHLine(x + 22 + step, y + 20, 5, SSD1306_WHITE);
+  if (scene == em::StatusScene::RadioCheck) {
+    display.drawLine(x + 9, y + 11, x + 12, y + 14, SSD1306_WHITE);
+    display.drawLine(x + 12, y + 11, x + 9, y + 14, SSD1306_WHITE);
+    display.drawLine(x + 20, y + 11, x + 23, y + 14, SSD1306_WHITE);
+    display.drawLine(x + 23, y + 11, x + 20, y + 14, SSD1306_WHITE);
+    display.drawFastVLine(61, 33, 11, SSD1306_WHITE); display.fillRect(60, 47, 3, 3, SSD1306_WHITE);
+  } else {
+    display.fillRect(x + 10, y + 12, 2, 2, SSD1306_WHITE);
+    display.fillRect(x + 21, y + 12, 2, 2, SSD1306_WHITE);
+  }
+  if (scene == em::StatusScene::PairPhone || scene == em::StatusScene::RelayReady) {
+    display.drawFastHLine(45, 39, 5, SSD1306_WHITE);
+    display.drawLine(44, 34, 48, 31, SSD1306_WHITE);
+    display.drawLine(44, 45, 48, 48, SSD1306_WHITE);
+  } else if (scene == em::StatusScene::PhoneLinked) {
+    display.drawRoundRect(53, 34, 16, 9, 4, SSD1306_WHITE);
+    display.drawRoundRect(63, 40, 16, 9, 4, SSD1306_WHITE);
+    display.drawLine(62, 39, 68, 43, SSD1306_WHITE);
+  } else if (walking) {
+    display.drawRect(51, 33, 18, 12, SSD1306_WHITE);
+    display.drawLine(52, 34, 60, 40, SSD1306_WHITE);
+    display.drawLine(60, 40, 67, 34, SSD1306_WHITE);
+    display.drawLine(38, 42, 50, 39, SSD1306_WHITE);
+  } else if (scene == em::StatusScene::PacketIn) {
+    display.drawRoundRect(88, 33, 28, 17, 5, SSD1306_WHITE);
+    display.drawFastVLine(96, 34, 15, SSD1306_WHITE);
+    display.drawFastVLine(102, 50, 4, SSD1306_WHITE);
+    display.drawFastVLine(111, 29, 8, SSD1306_WHITE);
+    display.drawFastHLine(111, 29, 8, SSD1306_WHITE);
+    display.drawLine(45, 42, 78, 42, SSD1306_WHITE);
+    display.drawLine(74, 39, 78, 42, SSD1306_WHITE);
+    display.drawLine(74, 45, 78, 42, SSD1306_WHITE);
+  } else if (scene == em::StatusScene::PhoneLost) {
+    display.drawCircle(65, 40, 9, SSD1306_WHITE);
+    display.fillRect(64, 30, 9, 6, SSD1306_BLACK);
+    display.drawLine(72, 32, 72, 38, SSD1306_WHITE);
+    display.drawLine(72, 38, 66, 35, SSD1306_WHITE);
+  }
+}
+
 void updateDisplay() {
   const uint32_t now = millis();
-  if (!hasDisplay || static_cast<uint32_t>(now - lastDisplay) < 2000 || transmitting) return;
+  // Bounded refresh outside pending radio IRQ/TX work. No delay or animation loop.
+  if (!hasDisplay || static_cast<uint32_t>(now - lastDisplay) < 1000 || transmitting || radioEvent) return;
   lastDisplay = now;
-  display.clearDisplay(); display.setTextSize(1); display.setTextColor(SSD1306_WHITE);
-  display.setCursor(0, 0); display.println("EMERGENCY MESH");
-  display.print(Role); display.print(" "); display.print(EM_FREQUENCY_HZ / 1000000); display.println("MHz");
-  display.println(radioReady ? "Radio ready" : "RADIO ERROR");
-  if (HasBle) display.println(bleSubscribed.load() ? "Phone subscribed" : "Phone not ready");
-  display.printf("RX %lu TX %lu\n", static_cast<unsigned long>(rxCount), static_cast<unsigned long>(txCount));
-  display.printf("Queue %u Drop %lu\n", static_cast<unsigned int>(radioQueue.size()), static_cast<unsigned long>(dropCount));
+  em::StatusInput input{};
+  input.role = DeviceRole; input.radioReady = radioReady;
+  input.phoneLinked = HasBle && bleConnected.load() && bleSubscribed.load();
+  input.hadPhoneLink = hadPhoneLink.load(); input.queued = radioQueue.size();
+  input.hasAcceptedRx = hasAcceptedRx; input.lastRxMs = lastAcceptedRx; input.nowMs = now;
+  input.frequencyMHz = EM_FREQUENCY_HZ / 1000000;
+  const auto text = em::statusText(input);
+  display.clearDisplay(); display.setTextWrap(false); display.setTextSize(1); display.setTextColor(SSD1306_WHITE);
+  display.setFont(&FreeSansBold9pt7b);
+  int16_t textX = 0, textY = 0; uint16_t textWidth = 0, textHeight = 0;
+  display.getTextBounds(text.title, 0, 14, &textX, &textY, &textWidth, &textHeight);
+  display.setCursor(0, 14);
+  // Long labels such as PHONE LINKED keep the same readable bold face.
+  // One pixel less tracking fits them on the physical 128-pixel panel.
+  for (const char* character = text.title; *character; ++character) {
+    display.write(static_cast<uint8_t>(*character));
+    if (textWidth > 128) display.setCursor(display.getCursorX() - 1, 14);
+  }
+  display.setFont(nullptr); display.setCursor(0, 20); display.print(text.subtitle);
+  drawCourier(em::selectStatusScene(input), now);
+  if (text.detail[0]) { display.setCursor(44, 35); display.print(text.detail); }
+  display.drawFastHLine(0, 54, 128, SSD1306_WHITE);
+  display.setCursor(0, 56); display.print(text.footer);
   display.display();
 }
 }
@@ -340,7 +417,7 @@ void setup() {
     if (radioReady) startRadioReceive();
   } else error("radio_initialization_failed");
   emitReady();
-  lastDisplay = millis() - 2000; updateDisplay();
+  lastDisplay = millis() - 1000; updateDisplay();
 }
 
 void loop() {

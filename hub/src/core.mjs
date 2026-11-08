@@ -1,16 +1,19 @@
 import { EventEmitter } from 'node:events';
-import { decodeFrame, encodeReceipt, frameDigest } from './codec.mjs';
+import { decodeFrame, encodeReceipt, frameDigest, inspectEnvelope } from './codec.mjs';
+import { hasDeviceKeyring, resolveDeviceKey } from './device-keyring.mjs';
 import { deterministicSummary, SummaryQueue } from './summary.mjs';
 
 export class HubCore extends EventEmitter {
-  constructor({ config, store, transmit = async () => { throw new Error('No radio connected'); }, now = () => Date.now(), ai = false, model, summarize } = {}) {
+  constructor({ config, store, transmit = async () => { throw new Error('No radio connected'); }, now = () => Date.now(), ai = false, model, summarize, standaloneSummary = true } = {}) {
     super(); this.config = config; this.store = store; this.transmit = transmit; this.now = now; this.pending = Promise.resolve(); this.rates = new Map(); this.globalRates = [];
-    this.summaryQueue = new SummaryQueue({ enabled: ai, model, summarize, onResult: (id, result) => this.exclusive(async () => { const item = this.store.get(id); if (item) { item.summary = result; await this.store.persist(); this.emit('update'); } }) });
+    this.summaryQueue = standaloneSummary ? new SummaryQueue({ enabled: ai, model, summarize, onResult: (id, result) => this.exclusive(async () => { const item = this.store.get(id); if (item) { item.summary = result; await this.store.persist(); this.emit('update'); } }) }) : null;
   }
   exclusive(action) { const next = this.pending.then(action); this.pending = next.catch(() => {}); return next; }
   incidentId(header) { return `${header.region}:${header.origin}:${header.sequence}`; }
   makeReceipt(item, status) {
-    return encodeReceipt({ requestOrigin: item.origin, requestSequence: item.sequence, status, text: status === 1 ? 'Received by demo hub; awaiting operator review.' : 'Reviewed by demo operator. No services dispatched.' }, { region: this.config.region, keyId: this.config.keyId, origin: this.config.hubOrigin, sequence: this.store.reserveSequence(), hops: 3 }, this.config.key).toString('base64');
+    const keyId = item.keyId ?? this.config.keyId;
+    const key = hasDeviceKeyring(this.config) ? resolveDeviceKey(this.config, item.origin, keyId) : this.config.key;
+    return encodeReceipt({ requestOrigin: item.origin, requestSequence: item.sequence, status, text: status === 1 ? 'Received by RescueMesh hub. Coordination queued.' : 'Reviewed by operator. Dispatch is simulated.' }, { region: this.config.region, keyId, origin: this.config.hubOrigin, sequence: this.store.reserveSequence(), hops: 3 }, key).toString('base64');
   }
   checkRate(origin) {
     const cutoff = this.now() - 60000;
@@ -27,6 +30,8 @@ export class HubCore extends EventEmitter {
   }
   ingest(frame, radio = {}) {
     return this.exclusive(async () => {
+      // Receipt origins identify the hub, so they cannot select a phone-specific decryption key.
+      if (inspectEnvelope(frame).type === 2) return { ignored: true, reason: 'receipt' };
       const decoded = decodeFrame(frame, this.config);
       if (decoded.header.type !== 1) return { ignored: true, reason: 'receipt' };
       const { header, request } = decoded;
@@ -44,13 +49,16 @@ export class HubCore extends EventEmitter {
       if (ageMs > 24 * 60 * 60 * 1000 || ageMs < -5 * 60 * 1000) throw new Error('Request timestamp outside allowed window');
       if (this.store.state.incidents.length >= 4096) throw new Error('Incident store full; operator maintenance required');
       const snapshot = structuredClone(this.store.state);
-      item = { id, digest, region: header.region, origin: header.origin, sequence: header.sequence, receivedAt: this.now(), lastReceivedAt: this.now(), receptions: 1, status: 'hub-received', reviewedAt: null, request, radio: { rssi: Number.isFinite(radio.rssi) ? radio.rssi : null, snr: Number.isFinite(radio.snr) ? radio.snr : null, hopsRemaining: header.hops }, summary: { text: deterministicSummary(request), source: 'extractive', model: null, needsReview: false }, simulated: Boolean(radio.simulated) };
+      item = { id, digest, region: header.region, keyId: header.keyId, origin: header.origin, sequence: header.sequence, receivedAt: this.now(), lastReceivedAt: this.now(), receptions: 1, status: 'hub-received', reviewedAt: null, request, radio: { rssi: Number.isFinite(radio.rssi) ? radio.rssi : null, snr: Number.isFinite(radio.snr) ? radio.snr : null, hopsRemaining: header.hops }, summary: { text: deterministicSummary(request), source: 'extractive', model: null, needsReview: false }, simulated: Boolean(radio.simulated) };
       item.receipt = this.makeReceipt(item, 1);
+      // Queue identity is in the same durable transaction as receipt creation. Network/model work runs later.
+      this.pipeline?.initialize(item);
       this.store.state.incidents.push(item);
       try { await this.store.persist(); } catch (error) { this.store.state = snapshot; throw error; }
       await this.send(item);
       // Receipt is already durable and submitted before model invocation is scheduled.
-      this.summaryQueue.enqueue(id, request);
+      this.summaryQueue?.enqueue(id, request);
+      this.pipeline?.wake();
       this.emit('update');
       return { id, duplicate: false, incident: this.publicIncident(item) };
     });

@@ -1,128 +1,301 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
-private let meshOrange = Color(red: 0.77, green: 0.25, blue: 0.02)
+private let rescueMagenta = Color(red: 226.0 / 255, green: 0, blue: 116.0 / 255)
+private let campusTitle = "UT Dallas · ECSW"
+
+private enum RequestRoute: Hashable {
+    case details, review, receipt(String)
+}
 
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
     @State private var tab = 0
+    @State private var path: [RequestRoute] = []
     @State private var showingDevices = false
+
     var body: some View {
         TabView(selection: $tab) {
-            request.tabItem { Label("Request", systemImage: "cross.case") }.tag(0)
-            outbox.tabItem { Label("Outbox", systemImage: "tray") }.tag(1)
-            SetupView().tabItem { Label("Setup", systemImage: "gearshape") }.tag(2)
+            NavigationStack(path: $path) {
+                request
+                    .navigationDestination(for: RequestRoute.self) { route in
+                        switch route {
+                        case .details: RequestDetailsView()
+                        case .review:
+                            RequestReviewView {
+                                if let id = model.queueRequest() { path = [.receipt(id)] }
+                            }
+                        case .receipt(let id): RequestStatusView(id: id)
+                        }
+                    }
+            }
+            .tabItem { Label("Request", systemImage: "cross.case") }.tag(0)
+            NavigationStack { RequestHistoryView() }
+                .tabItem { Label("My requests", systemImage: "tray") }.tag(1)
+            NavigationStack { SetupView() }
+                .tabItem { Label("Setup", systemImage: "gearshape") }.tag(2)
         }
-        .tint(meshOrange)
+        .tint(rescueMagenta)
         .sheet(isPresented: $showingDevices) { DevicePicker().environmentObject(model) }
         .alert("Could not complete action", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
             Button("OK", role: .cancel) { model.errorMessage = nil }
         } message: { Text(model.errorMessage ?? "") }
     }
-    private var prototypeBanner: some View {
-        Label("Prototype • No connection to 911", systemImage: "exclamationmark.triangle")
-            .font(.subheadline.weight(.semibold)).foregroundStyle(Color.red)
-            .frame(maxWidth: .infinity, alignment: .leading).accessibilityAddTraits(.isHeader)
-    }
+
     private var request: some View {
-        NavigationStack {
-            Form {
-                Section { prototypeBanner }
-                Section {
-                    HStack(alignment: .top, spacing: 12) {
-                        Image(systemName: "antenna.radiowaves.left.and.right").font(.title2).accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Radio device").font(.headline)
-                            Text(model.radio.status).font(.subheadline).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) {
+                Text(campusTitle).font(.subheadline).foregroundStyle(.secondary)
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("What do you need?").font(.title2.bold()).accessibilityAddTraits(.isHeader)
+                    ForEach(EmergencyCategory.allCases) { category in
+                        let selected = model.draft.category == category
+                        Button { model.updateDraft { $0.category = category } } label: {
+                            HStack(spacing: 16) {
+                                Image(systemName: category.symbol).font(.title2).frame(width: 30).accessibilityHidden(true)
+                                Text(category.title).font(.body.weight(selected ? .semibold : .regular))
+                                Spacer(minLength: 8)
+                                Image(systemName: selected ? "checkmark" : "chevron.right")
+                                    .font(.body.weight(.semibold)).foregroundStyle(selected ? rescueMagenta : Color.secondary)
+                                    .accessibilityHidden(true)
+                            }
+                            .foregroundStyle(.primary).padding(16).frame(maxWidth: .infinity, minHeight: 64)
+                            .background(selected ? rescueMagenta.opacity(0.10) : Color(uiColor: .systemBackground), in: RoundedRectangle(cornerRadius: 12))
+                            .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(selected ? Color.clear : Color(uiColor: .separator).opacity(0.6)) }
                         }
-                        Spacer(minLength: 8)
-                        Button(model.radio.ready ? "Manage" : "Connect") { showingDevices = true }.frame(minHeight: 44)
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(selected ? [.isSelected] : [])
                     }
                 }
-                Section {
-                    Picker("Type", selection: draftBinding(\.category)) {
-                        ForEach(EmergencyCategory.allCases) { type in Label(type.title, systemImage: type.symbol).tag(type) }
-                    }
-                    Picker("Priority you report", selection: draftBinding(\.severity)) {
-                        ForEach(ReportedSeverity.allCases) { priority in Text(priority.title).tag(priority) }
-                    }
-                    Stepper("People: \(model.draft.people)", value: draftBinding(\.people), in: 1...255)
+                Button { showingDevices = true } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "antenna.radiowaves.left.and.right").accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(model.radio.ready ? "Companion connected" : "Connect your companion").font(.subheadline.weight(.semibold))
+                            Text(model.radio.ready ? "Requests travel through the radio mesh." : "You can prepare a request while offline.")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer(minLength: 4)
+                        Image(systemName: "chevron.right").font(.caption.weight(.semibold)).accessibilityHidden(true)
+                    }.foregroundStyle(.primary).frame(minHeight: 44)
+                }.buttonStyle(.plain)
+            }.padding(.horizontal, 24).padding(.bottom, 16)
+        }
+        .navigationTitle("Ask for help")
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Setup") { tab = 2 } } }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            actionArea {
+                NavigationLink(value: RequestRoute.details) { Text("Continue").primaryActionLabel() }
+                    .buttonStyle(.borderedProminent)
+                Text("RescueMesh demonstration · No emergency-service connection.").secondaryFootnote()
+            }
+        }
+    }
+}
+
+private struct RequestDetailsView: View {
+    @EnvironmentObject private var model: AppModel
+
+    var body: some View {
+        Form {
+            Section {
+                Label(model.draft.category.title, systemImage: model.draft.category.symbol).font(.headline)
+                Picker("Priority you report", selection: draftBinding(\.severity)) {
+                    ForEach(ReportedSeverity.allCases) { Text($0.title).tag($0) }
+                }
+                Stepper("People: \(model.draft.people)", value: draftBinding(\.people), in: 1...255)
+                DisclosureGroup("Additional concerns") {
                     Toggle("Breathing concern", isOn: draftBinding(\.breathingConcern))
                     Toggle("Trapped", isOn: draftBinding(\.trapped))
                     Toggle("Severe bleeding", isOn: draftBinding(\.severeBleeding))
-                } header: { Text("Emergency information") } footer: { Text("These are your reported details. The app does not assess medical urgency.") }
-                Section {
-                    TimelineView(.periodic(from: .now, by: 10)) { context in
-                        VStack(alignment: .leading, spacing: 6) {
-                            if let fix = model.location.fix, fix.isUsable(at: context.date) {
-                                Text(model.location.message)
-                                Text("Captured \(fix.capturedAt.formatted(date: .omitted, time: .standard))").font(.caption).foregroundStyle(.secondary)
-                            } else { Text(model.location.fix == nil ? model.location.message : "Location is over 2 minutes old. Refresh it or send without GPS.") }
-                        }
-                    }
-                    Button(model.location.requesting ? "Finding location…" : "Use current location") { model.location.request() }
-                        .disabled(model.location.requesting).frame(minHeight: 44)
-                    if model.location.fix != nil { Button("Remove location", role: .destructive) { model.location.clear() }.frame(minHeight: 44) }
-                } header: { Text("Location") } footer: { Text("GPS is optional. If unavailable, include a landmark or address in notes. Only a fix less than 2 minutes old is sent.") }
-                Section {
-                    TextField("What happened? Where can responders find you?", text: draftBinding(\.note), axis: .vertical)
-                        .lineLimit(3...6).autocorrectionDisabled(false).accessibilityLabel("Emergency notes")
-                    HStack { Spacer(); Text("\(model.draft.byteCount) / 120 bytes").font(.caption.monospacedDigit()).foregroundStyle(model.draft.byteCount > 120 ? Color.red : Color.secondary) }
-                } header: { Text("Notes") } footer: { Text("Keep it short. Emoji and accented characters can use several bytes.") }
-                Section {
-                    Button {
-                        let count = model.snapshot.outbox.count; model.queueRequest()
-                        if model.snapshot.outbox.count > count && model.storageReady { tab = 1 }
-                    } label: {
-                        Label("Queue request", systemImage: "paperplane.fill").font(.headline).frame(maxWidth: .infinity, minHeight: 44)
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(model.draft.byteCount > 120 || !model.storageReady || model.profile == nil)
-                    if model.profile == nil { Button("Import a regional profile in Setup") { tab = 2 }.frame(minHeight: 44) }
-                } footer: { Text("Queued requests stay on this phone until sent. A hub receipt confirms delivery to the local hub. It does not mean emergency services are coming.") }
+                }
+            } header: { Text("Your situation") } footer: { Text("Choose the priority that describes your situation. These details are reported by you.") }
+            Section {
+                TextField("What do you need, and where can we find you?", text: draftBinding(\.note), axis: .vertical)
+                    .lineLimit(4...8).accessibilityLabel("Request details and landmark")
+                HStack {
+                    Text(model.draft.byteCount > 120 ? "Please shorten your message" : "Keep your message brief")
+                    Spacer()
+                    Text("\(model.draft.byteCount)/120").monospacedDigit()
+                }.font(.caption).foregroundStyle(model.draft.byteCount > 120 ? Color.red : Color.secondary)
+            } header: { Text("Details and landmark") } footer: { Text("Add a building, entrance or nearby landmark. Radio messages allow 120 UTF-8 bytes; some characters use more than one.") }
+            Section {
+                TimelineView(.periodic(from: .now, by: 10)) { context in
+                    if let fix = model.location.fix, fix.isUsable(at: context.date) {
+                        Label("Current location attached", systemImage: "location.fill")
+                        Text("Captured \(fix.capturedAt.formatted(date: .omitted, time: .shortened)) · About \(Int(fix.accuracy.rounded(.up))) m accuracy")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else { Text(model.location.fix == nil ? model.location.message : "Location expired. Refresh it to attach GPS.").font(.subheadline).foregroundStyle(.secondary) }
+                }
+                Button(model.location.requesting ? "Finding location…" : "Use current location") { model.location.request() }
+                    .disabled(model.location.requesting).frame(minHeight: 44)
+                if model.location.fix != nil { Button("Remove GPS location", role: .destructive) { model.location.clear() }.frame(minHeight: 44) }
+            } header: { Text("GPS location · optional") } footer: { Text("Only a location captured in the last two minutes is sent. A landmark in your message helps when GPS is unavailable.") }
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .navigationTitle("A few details").navigationBarTitleDisplayMode(.inline)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            actionArea {
+                NavigationLink(value: RequestRoute.review) { Text("Review request").primaryActionLabel() }
+                    .buttonStyle(.borderedProminent).disabled(model.draft.byteCount > 120)
             }
-            .scrollDismissesKeyboard(.interactively)
-            .navigationTitle("Request help")
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Text("EmergencyMesh").font(.caption.weight(.semibold)).foregroundStyle(.secondary) } }
         }
     }
     private func draftBinding<T>(_ keyPath: WritableKeyPath<RequestDraft, T>) -> Binding<T> {
         Binding(get: { model.draft[keyPath: keyPath] }, set: { value in model.updateDraft { $0[keyPath: keyPath] = value } })
     }
-    private var outbox: some View {
-        NavigationStack {
-            List {
-                Section { prototypeBanner }
-                if model.outbox.isEmpty {
-                    ContentUnavailableView("No requests queued", systemImage: "tray", description: Text("Create a request in the Request tab. Drafts and history are encrypted on this phone."))
+}
+
+private struct RequestReviewView: View {
+    @EnvironmentObject private var model: AppModel
+    @Environment(\.dismiss) private var dismiss
+    let send: () -> Void
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) {
+                TimelineView(.periodic(from: .now, by: 10)) { context in
+                    RequestSummary(draft: model.draft, location: model.location.fix.flatMap { $0.isUsable(at: context.date) ? $0 : nil })
                 }
-                ForEach(model.outbox) { item in
-                    Section {
-                        VStack(alignment: .leading, spacing: 10) {
-                            HStack(alignment: .firstTextBaseline) {
-                                Label(item.draft.category.title, systemImage: item.draft.category.symbol).font(.headline)
-                                Spacer(); Text(item.draft.severity.title).font(.subheadline.weight(.semibold))
-                            }
-                            Label(item.status.title, systemImage: item.status.confirmed ? "checkmark.circle" : "clock")
-                                .font(.headline).foregroundStyle(item.status.confirmed ? Color.green : meshOrange)
-                            Text(item.createdAt.formatted(date: .abbreviated, time: .standard)).font(.caption).foregroundStyle(.secondary)
-                            Text("\(item.draft.people) people • Request \(item.sequence)").font(.subheadline)
-                            if !item.draft.note.isEmpty { Text(item.draft.note).textSelection(.enabled) }
-                            if let fix = item.location { Text(String(format: "%.5f, %.5f • ±%.0f m", fix.latitude, fix.longitude, fix.accuracy)).font(.caption) }
-                            else { Text("No GPS location attached").font(.caption).foregroundStyle(.secondary) }
-                            Text("BLE transfer attempts: \(item.attemptCount)").font(.caption).foregroundStyle(.secondary)
-                            if let text = item.receiptText { Text(text).font(.subheadline).textSelection(.enabled) }
-                            if let error = item.lastError { Text(error).font(.subheadline).foregroundStyle(Color.red) }
-                            if item.status == .unconfirmed {
-                                Text("No authenticated hub receipt arrived. Check the mesh and hub, then retry this same request.").font(.subheadline)
-                                Button("Retry request") { model.retry(item.id) }.frame(minHeight: 44)
-                            }
-                            if item.status == .queued && !model.radio.ready { Button("Connect radio device") { showingDevices = true }.frame(minHeight: 44) }
-                            if item.status == .operatorReviewed { Text("Reviewed by a demo operator. No emergency-service dispatch is confirmed.").font(.caption).foregroundStyle(.secondary) }
-                        }.padding(.vertical, 6)
+                Text(model.radio.ready ? "Your companion is ready. We’ll wait for a receipt from the hub." : "Your request will be saved on this phone. Connect your companion to send it.")
+                    .font(.subheadline).foregroundStyle(.secondary)
+                if model.profile == nil {
+                    Label("Import your phone’s private profile in Setup before sending.", systemImage: "key")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                }
+                if !model.storageReady {
+                    Label("Protected storage is unavailable. Your request cannot be saved yet.", systemImage: "exclamationmark.circle")
+                        .font(.subheadline).foregroundStyle(Color.red)
+                }
+            }.padding(24)
+        }
+        .navigationTitle("Your request")
+        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Edit") { dismiss() } } }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            actionArea {
+                Button(action: send) { Text(model.radio.ready ? "Send request" : "Save request to send").primaryActionLabel() }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(model.profile == nil || !model.storageReady || model.draft.byteCount > 120)
+                Text("Your request is saved securely on your phone.").secondaryFootnote()
+            }
+        }
+        .privacySensitive()
+    }
+}
+
+private struct RequestSummary: View {
+    let draft: RequestDraft
+    let location: LocationFix?
+    var body: some View {
+        VStack(alignment: .leading, spacing: 24) {
+            HStack(alignment: .top, spacing: 16) {
+                Image(systemName: draft.category.symbol).font(.title2).frame(width: 28).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("\(draft.category.title) requested").font(.title3.bold())
+                    Text("\(draft.people) \(draft.people == 1 ? "person" : "people") · \(draft.severity.title)").foregroundStyle(.secondary)
+                }
+            }
+            HStack(alignment: .top, spacing: 16) {
+                Image(systemName: location == nil ? "mappin" : "location.fill").font(.title2).foregroundStyle(rescueMagenta).frame(width: 28).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(location == nil ? "No GPS location attached" : "GPS location attached")
+                    if let location { Text(String(format: "%.5f, %.5f", location.latitude, location.longitude)).font(.subheadline).foregroundStyle(.secondary) }
+                    else { Text("Include a landmark in your message.").font(.subheadline).foregroundStyle(.secondary) }
+                }
+            }
+            if draft.breathingConcern || draft.trapped || draft.severeBleeding {
+                VStack(alignment: .leading, spacing: 6) {
+                    if draft.breathingConcern { Label("Breathing concern", systemImage: "exclamationmark.circle") }
+                    if draft.trapped { Label("Trapped", systemImage: "exclamationmark.circle") }
+                    if draft.severeBleeding { Label("Severe bleeding", systemImage: "exclamationmark.circle") }
+                }.font(.subheadline)
+            }
+            Divider()
+            Text(draft.note.isEmpty ? "No additional details." : draft.note).font(.body).textSelection(.enabled)
+        }
+    }
+}
+
+private struct RequestHistoryView: View {
+    @EnvironmentObject private var model: AppModel
+    var body: some View {
+        List {
+            if model.outbox.isEmpty {
+                ContentUnavailableView("No requests yet", systemImage: "tray", description: Text("Prepare a request in the Request tab. Your history stays on this phone."))
+            }
+            ForEach(model.outbox) { item in
+                NavigationLink { RequestStatusView(id: item.id) } label: {
+                    HStack(alignment: .top, spacing: 14) {
+                        Image(systemName: item.draft.category.symbol).font(.title3).frame(width: 26).padding(.top, 2).accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(item.draft.category.title).font(.headline)
+                            Text(item.status.title).font(.subheadline)
+                            Text(item.createdAt.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(.secondary)
+                        }
+                    }.padding(.vertical, 8)
+                }
+            }
+        }
+        .navigationTitle("My requests").privacySensitive()
+    }
+}
+
+private struct RequestStatusView: View {
+    @EnvironmentObject private var model: AppModel
+    @State private var showingDevices = false
+    let id: String
+
+    var body: some View {
+        ScrollView {
+            if let item = model.outbox.first(where: { $0.id == id }) {
+                VStack(alignment: .leading, spacing: 28) {
+                    HStack(alignment: .top, spacing: 14) {
+                        Image(systemName: item.status.confirmed ? "checkmark.circle.fill" : (item.status == .unconfirmed ? "exclamationmark.circle" : "clock"))
+                            .font(.largeTitle).foregroundStyle(rescueMagenta).accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text(item.status.title).font(.title2.bold()).accessibilityAddTraits(.isHeader)
+                            Text((item.receiptAt ?? item.createdAt).formatted(date: .omitted, time: .shortened)).foregroundStyle(.secondary)
+                        }
                     }
-                }
-            }.navigationTitle("Outbox").privacySensitive()
+                    Text(statusExplanation(item.status)).font(.subheadline)
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(14)
+                        .background(rescueMagenta.opacity(0.09), in: RoundedRectangle(cornerRadius: 10))
+                    RequestSummary(draft: item.draft, location: item.location)
+                    if let error = item.lastError { Text(error).font(.subheadline).foregroundStyle(Color.red) }
+                    if item.status == .unconfirmed {
+                        Button("Retry this request") { model.retry(item.id) }.buttonStyle(.borderedProminent).frame(minHeight: 44)
+                    }
+                    if !item.status.confirmed && !model.radio.ready {
+                        Button("Connect companion") { showingDevices = true }.buttonStyle(.bordered).frame(minHeight: 44)
+                    }
+                    Divider()
+                    DisclosureGroup("Delivery details") {
+                        VStack(alignment: .leading, spacing: 12) {
+                            LabeledContent("Request", value: String(item.sequence))
+                            LabeledContent("Radio transfer attempts", value: String(item.attemptCount))
+                            Text("Saved \(item.createdAt.formatted(date: .abbreviated, time: .shortened))")
+                            if let text = item.receiptText { Text(text).textSelection(.enabled) }
+                            if item.status.confirmed { Label("Receipt authenticated with your phone’s key", systemImage: "lock.shield") }
+                            Text("Retries reuse this saved request. They do not create a new incident.").foregroundStyle(.secondary)
+                        }.font(.subheadline).padding(.top, 12)
+                    }
+                    Text("This does not confirm emergency-service dispatch.").font(.footnote).foregroundStyle(.secondary)
+                }.padding(24)
+            } else {
+                ContentUnavailableView("Request no longer on this phone", systemImage: "tray", description: Text("Local history may have been cleared. Reports already received remain at the hub."))
+            }
+        }
+        .navigationTitle("My request").privacySensitive()
+        .sheet(isPresented: $showingDevices) { DevicePicker().environmentObject(model) }
+    }
+
+    private func statusExplanation(_ status: DeliveryStatus) -> String {
+        switch status {
+        case .queued: return model.radio.ready ? "Saved on your phone. Waiting to transfer to your companion." : "Saved on your phone. Connect your companion to send it."
+        case .submitted: return "Your companion has the request. Waiting for the local hub to confirm receipt."
+        case .unconfirmed: return "A hub receipt hasn’t arrived. Check your companion and try this request again."
+        case .hubReceived: return "Your local hub received the request. An operator has not marked it reviewed."
+        case .operatorReviewed: return "An operator marked this request reviewed at the hub."
         }
     }
 }
@@ -133,24 +306,28 @@ private struct DevicePicker: View {
     var body: some View {
         NavigationStack {
             List {
-                Section { Text(model.radio.status) }
+                Section { Label(model.radio.status, systemImage: "antenna.radiowaves.left.and.right") }
                 Section {
-                    Button(model.radio.scanning ? "Stop scan" : "Find nearby radios") { model.radio.scanning ? model.radio.stopScan() : model.radio.scan() }.frame(minHeight: 44)
+                    Button(model.radio.scanning ? "Stop looking" : "Find nearby companions") { model.radio.scanning ? model.radio.stopScan() : model.radio.scan() }.frame(minHeight: 44)
                     ForEach(model.radio.devices) { device in
-                        Button {
-                            model.radio.connect(device)
-                        } label: {
-                            HStack { VStack(alignment: .leading) { Text(device.name); Text(device.id.uuidString.suffix(8)).font(.caption).foregroundStyle(.secondary) }; Spacer(); Text("\(device.rssi) dBm").font(.caption.monospacedDigit()) }
-                                .frame(minHeight: 44)
+                        Button { model.radio.connect(device) } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(device.name)
+                                    Text("Device \(device.id.uuidString.suffix(8))").font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Image(systemName: "chevron.right").font(.caption).accessibilityHidden(true)
+                            }.frame(minHeight: 44)
                         }
                     }
-                } footer: { Text("Connect only to your team's device. BLE names are not authenticated identities. The regional key protects request contents.") }
-                if model.radio.ready { Button("Disconnect", role: .destructive) { model.radio.disconnect() }.frame(minHeight: 44) }
+                } footer: { Text("Choose the companion you’re powering. A Bluetooth name is not an authenticated identity; your phone’s private key protects the message contents.") }
+                if model.radio.ready { Button("Disconnect companion", role: .destructive) { model.radio.disconnect() }.frame(minHeight: 44) }
             }
-            .navigationTitle("Radio device")
+            .navigationTitle("Your companion").navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
             .onDisappear { model.radio.stopScan() }
-        }
+        }.tint(rescueMagenta)
     }
 }
 
@@ -159,52 +336,80 @@ private struct SetupView: View {
     @State private var profileText = ""
     @State private var importing = false
     @State private var clearing = false
+    @State private var showingDevices = false
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    Text("EmergencyMesh is a hackathon prototype. It has no connection to 911 or an emergency-service dispatcher.").font(.subheadline).foregroundStyle(Color.red)
-                    if let profile = model.profile {
+        Form {
+            Section {
+                Text("RescueMesh").font(.title2.bold())
+                Text(campusTitle).foregroundStyle(.secondary)
+                Text("A radio mesh for requests when connectivity is limited.").font(.subheadline)
+            }
+            Section {
+                if let profile = model.profile {
+                    Label("Phone profile installed", systemImage: "checkmark.shield")
+                    Text("Stored in this phone’s Keychain.").font(.subheadline).foregroundStyle(.secondary)
+                    DisclosureGroup("Profile identity") {
                         LabeledContent("Region", value: String(profile.region))
-                        LabeledContent("Key ID", value: String(profile.keyId))
-                        LabeledContent("Phone origin", value: String(profile.origin))
-                        Text("Regional key stored in this phone's Keychain.").font(.caption).foregroundStyle(.secondary)
-                    } else { Text("Import the private profile created by your local hub. Each phone needs a distinct origin.") }
-                    Button("Import profile JSON file") { importing = true }.frame(minHeight: 44)
-                    DisclosureGroup("Paste profile instead") {
-                        SecureField("Private profile JSON", text: $profileText).textInputAutocapitalization(.never).autocorrectionDisabled()
-                        Button("Store profile securely") { model.importProfile(profileText); profileText = "" }.disabled(profileText.isEmpty).frame(minHeight: 44)
+                        LabeledContent("Phone ID", value: String(format: "%08X", profile.origin))
+                        LabeledContent("Key fingerprint", value: String(profile.keyFingerprint.prefix(16)))
+                        Text("The fingerprint identifies the key without revealing it. Newly issued profiles each have a different content key.").font(.caption).foregroundStyle(.secondary)
                     }
-                } header: { Text("Provisioning") } footer: { Text("Do not share the key publicly. This demo uses a shared regional key: anyone with it can impersonate a phone or hub. BLE pairing alone does not identify a dispatcher.") }
-                Section {
-                    Text("Phone → BLE radio → LoRa relays → USB radio → local laptop hub.")
-                    Text("The USB cable supplies power. App data uses Bluetooth. Keep the app open for timed retries. iOS may suspend or terminate background work; reconnecting can resume queued requests.")
-                    Text("Attach a matching antenna before transmitting. Confirm the board's frequency and firmware with the hub operator.")
-                    Text("Hub received means the hub decoded the request. Operator reviewed means a person reviewed it in the demo console. Neither means emergency services were dispatched.")
-                } header: { Text("Using the prototype") }
-                Section {
-                    Button("Run local codec simulation") { model.runCodecDemo() }.frame(minHeight: 44)
+                } else { Text("Get your phone’s private profile file from the hub operator to join this region.") }
+                Button("Import private profile") { importing = true }.frame(minHeight: 44)
+                DisclosureGroup("Paste a profile") {
+                    SecureField("Private profile JSON", text: $profileText).textInputAutocapitalization(.never).autocorrectionDisabled()
+                    Button("Save profile securely") { model.importProfile(profileText); profileText = "" }.disabled(profileText.isEmpty).frame(minHeight: 44)
+                }
+            } header: { Text("Your phone") } footer: { Text("Keep this profile private. Other companions can carry an encrypted request without opening it. Ask the operator to replace older shared-key profiles.") }
+            Section {
+                Button { showingDevices = true } label: {
+                    LabeledContent("Companion", value: model.radio.ready ? "Connected" : "Connect")
+                }.frame(minHeight: 44)
+                Text(model.radio.status).font(.subheadline).foregroundStyle(.secondary)
+            } header: { Text("Radio connection") }
+            Section {
+                DisclosureGroup("How delivery works") {
+                    Text("Your phone sends through Bluetooth to your companion. LoRa relays carry the encrypted request to the local hub.")
+                    Text("The USB cable supplies power. Keep the app open during sending; iOS may pause background work. Saved requests resume when you reconnect.")
+                    Text("A hub receipt confirms delivery to that hub. Operator reviewed means a person marked it reviewed. Neither confirms emergency-service dispatch.")
+                    Text("Attach the matching antenna before powering a radio. Confirm its frequency with the hub operator.")
+                }
+                Text("This demonstration has no connection to emergency services.").font(.subheadline).foregroundStyle(.secondary)
+            } header: { Text("About this demonstration") }
+            Section {
+                DisclosureGroup("Local radio-free check") {
+                    Button("Check encryption locally") { model.runCodecDemo() }.frame(minHeight: 44)
                     if let result = model.demoResult { Text(result).font(.subheadline).textSelection(.enabled) }
-                } header: { Text("Simulator / no-radio demo") } footer: { Text("This checks encryption and chunk reassembly using public synthetic test data. It does not simulate a successful real request in Outbox.") }
-                Section {
-                    Button("Clear local history and key", role: .destructive) { clearing = true }.frame(minHeight: 44)
-                    if !model.lastAction.isEmpty { Text(model.lastAction).font(.caption).foregroundStyle(.secondary) }
-                } header: { Text("Local data") } footer: { Text("Drafts and requests are encrypted on this device and excluded from app backups. The app sends only the details you queue, without an account or cloud backend.") }
-            }
-            .navigationTitle("Setup").privacySensitive()
-            .fileImporter(isPresented: $importing, allowedContentTypes: [.json], allowsMultipleSelection: false) { result in
-                do {
-                    guard let url = try result.get().first else { return }
-                    let scoped = url.startAccessingSecurityScopedResource(); defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-                    let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
-                    guard size <= 4096 else { throw MeshError.invalid("Profile exceeds 4 KB.") }
-                    let data = try Data(contentsOf: url); guard let json = String(data: data, encoding: .utf8) else { throw MeshError.invalid("Profile must contain UTF-8 JSON.") }
-                    model.importProfile(json)
-                } catch { model.errorMessage = error.localizedDescription }
-            }
-            .confirmationDialog("Delete all local requests, draft and regional key?", isPresented: $clearing, titleVisibility: .visible) {
-                Button("Delete local data", role: .destructive) { model.clearLocalData() }
-            } message: { Text("Requests already received by a hub remain on that hub. Queued requests on this phone will be lost.") }
+                    Text("Uses synthetic data only. This does not send a request or change its delivery status.").font(.caption).foregroundStyle(.secondary)
+                }
+                Button("Clear local history and profile", role: .destructive) { clearing = true }.frame(minHeight: 44)
+                if !model.lastAction.isEmpty { Text(model.lastAction).font(.caption).foregroundStyle(.secondary) }
+            } header: { Text("Local data") } footer: { Text("Drafts and history are encrypted on this phone and excluded from app backups. Clearing this phone does not delete reports already received by a hub.") }
         }
+        .navigationTitle("Setup").privacySensitive()
+        .sheet(isPresented: $showingDevices) { DevicePicker().environmentObject(model) }
+        .fileImporter(isPresented: $importing, allowedContentTypes: [.json], allowsMultipleSelection: false) { result in
+            do {
+                guard let url = try result.get().first else { return }
+                let scoped = url.startAccessingSecurityScopedResource(); defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize ?? 0
+                guard size <= 4096 else { throw MeshError.invalid("Profile exceeds 4 KB.") }
+                let data = try Data(contentsOf: url); guard let json = String(data: data, encoding: .utf8) else { throw MeshError.invalid("Profile must contain UTF-8 JSON.") }
+                model.importProfile(json)
+            } catch { model.errorMessage = error.localizedDescription }
+        }
+        .confirmationDialog("Delete this phone’s requests, draft and profile?", isPresented: $clearing, titleVisibility: .visible) {
+            Button("Delete local data", role: .destructive) { model.clearLocalData() }
+        } message: { Text("Requests already received remain on the hub. Requests waiting on this phone will be lost.") }
     }
+}
+
+private func actionArea<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+    VStack(spacing: 12, content: content).padding(.horizontal, 24).padding(.vertical, 16)
+        .frame(maxWidth: .infinity).background(Color(uiColor: .systemBackground))
+}
+
+private extension View {
+    func primaryActionLabel() -> some View { font(.headline).frame(maxWidth: .infinity, minHeight: 38) }
+    func secondaryFootnote() -> some View { font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true) }
 }

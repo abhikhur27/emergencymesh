@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src 'self' data:; style-src 'self'; script-src 'self'; base-uri 'none'; form-action 'none'">
+  <title>RescueMesh — one request changing hands</title>
+  <meta name="description" content="A static six-beat RescueMesh storyboard following one synthetic drinking-water request. No live services.">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#workspace">Skip journey controls</a>
+  <header class="story-header">
+    <a class="story-title" href="../RESCUEMESH.md">One request changing hands</a>
+    <p>Clickable design concept · One synthetic case</p>
+    <a id="reference" href="../rescuemesh-phone.png" target="_blank" rel="noopener">Generated reference</a>
+  </header>
+  <nav class="journey-nav" aria-label="Journey beats" id="beats"></nav>
+  <main>
+    <div class="beat-context"><p id="beat-description"></p><span id="responsibility"></span></div>
+    <section id="workspace" tabindex="-1" aria-label="Application workspace"></section>
+    <footer class="story-footer">
+      <button id="previous" type="button">Previous</button>
+      <p id="story-progress" aria-live="polite"></p>
+      <button id="next" type="button">Next</button>
+    </footer>
+    <details class="story-extras"><summary>Explore the storyboard</summary><div class="extra-controls"><button type="button" id="exception">Show a resource shortage</button><a href="../rescuemesh-oled.png" target="_blank" rel="noopener">Accepted OLED concept</a><a href="../RESCUEMESH.md">Premise and source receipts</a></div><p>Agents automatically process and share this example within the demo policy. Journey controls advance the storyboard, not an approval workflow. This preview calls no model, database, radio or emergency service. Keyboard: Alt and left or right changes beats.</p></details>
+  </main>
+  <dialog id="setup-dialog"><form method="dialog"><div class="dialog-head"><h2>Companion setup</h2><button value="close" aria-label="Close setup">Close</button></div><p>UT Dallas · ECSW</p><p>Companion DEMO is already privately provisioned for this journey.</p><details><summary>Device and privacy details</summary><p>USB supplies power; Bluetooth carries app data. Private profiles and keys are never displayed. Actual provisioning and per-device enrollment need implementation.</p></details><p class="fine">Illustrative setup only. No Bluetooth scan or file import occurs.</p></form></dialog>
+  <dialog id="location-dialog"><form id="location-form"><div class="dialog-head"><h2>Correct the case location</h2><button type="button" data-close-location>Close</button></div><label for="corrected-location">Landmark</label><input id="corrected-location" name="location" maxlength="100" required><p class="fine">This changes the hub case only. The original phone message stays unchanged. A corrected landmark is still approximate, not GPS.</p><button type="submit" class="primary">Save correction</button><p id="location-error" class="error-message" role="alert"></p></form></dialog>
+  <div class="sr-only" id="announcement" role="status" aria-live="polite"></div>
+</body>
+</html>

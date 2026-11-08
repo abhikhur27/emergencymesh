@@ -48,12 +48,12 @@ final class AppModel: ObservableObject {
             guard let store, storageReady else { throw MeshError.invalid("Protected storage unavailable.") }
             try store.saveProfile(candidate)
             if profile != candidate { snapshot.receiptDigests = [:] }
-            profile = candidate; guard persist() else { return }; lastAction = "Regional profile stored in Keychain."
+            profile = candidate; guard persist() else { return }; lastAction = "Private phone profile stored in Keychain."
         } catch { errorMessage = "Could not import profile. \(error.localizedDescription)" }
     }
-    func queueRequest() {
+    @discardableResult func queueRequest() -> String? {
         do {
-            guard storageReady, let profile, let store else { throw MeshError.invalid("Import the private regional profile in Setup first.") }
+            guard storageReady, let profile, let store else { throw MeshError.invalid("Import your private phone profile in Setup first.") }
             guard snapshot.outbox.count < 200 else { throw MeshError.invalid("Local history is full (200 requests). Clear history after recording any needed statuses.") }
             let date = Date(); let fix = location.fix.flatMap { $0.isUsable(at: date) ? $0 : nil }
             let battery = UIDevice.current.batteryLevel
@@ -63,10 +63,11 @@ final class AppModel: ObservableObject {
             let frame = try WireCodec.seal(type: 1, plaintext: plaintext, profile: profile, sequence: sequence)
             let item = OutboxItem(origin: profile.origin, sequence: sequence, createdAt: date, draft: draft, location: fix, frame: frame)
             snapshot.outbox.append(item)
-            guard persist() else { return }
+            guard persist() else { return nil }
             lastAction = "Request queued on this phone. Hub delivery is not confirmed."
             pump()
-        } catch { errorMessage = error.localizedDescription }
+            return item.id
+        } catch { errorMessage = error.localizedDescription; return nil }
     }
     func retry(_ id: String) {
         guard let i = snapshot.outbox.firstIndex(where: { $0.id == id }), !snapshot.outbox[i].status.confirmed else { return }
@@ -135,7 +136,7 @@ final class AppModel: ObservableObject {
         do {
             guard let store else { throw MeshError.invalid("Protected storage unavailable.") }
             try store.clear(); snapshot = AppSnapshot(); profile = nil; storageReady = true
-            guard persist() else { return }; lastAction = "Local requests, draft and regional key removed."; demoResult = nil
+            guard persist() else { return }; lastAction = "Local requests, draft and phone profile removed."; demoResult = nil
         } catch { errorMessage = error.localizedDescription }
     }
     func runCodecDemo() {
