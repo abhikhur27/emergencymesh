@@ -118,12 +118,138 @@ struct OutboxItem: Codable, Identifiable {
     var receiptText: String?
     var receiptAt: Date?
     var lastError: String?
+    var kind: OutboxKind = .report
+    var reportID: String?
+    var questionID: String?
+    var profileIdentity: String?
+
+    private enum CodingKeys: String, CodingKey {
+        case origin, sequence, createdAt, draft, location, frame, status, firstAttemptAt, attemptCount,
+             lastAttemptAt, receiptText, receiptAt, lastError, kind, reportID, questionID, profileIdentity
+    }
 }
 
 struct AppSnapshot: Codable {
     var draft = RequestDraft()
     var outbox: [OutboxItem] = []
     var receiptDigests: [String: String] = [:]
+    var hubQuestions: [HubQuestion] = []
+    var messagingAcknowledgedProfiles: Set<String> = []
+
+    var reports: [OutboxItem] { outbox.filter { $0.kind == .report } }
+    func questions(for reportID: String) -> [HubQuestion] {
+        hubQuestions.filter { $0.reportID == reportID }.sorted { $0.receivedAt < $1.receivedAt }
+    }
+    func reply(to question: HubQuestion) -> OutboxItem? {
+        guard let id = question.replyOutboxID else { return nil }
+        return outbox.first { $0.id == id && $0.kind == .reply && $0.reportID == question.reportID && $0.questionID == question.questionID }
+    }
+    func needsReply(_ question: HubQuestion) -> Bool { reply(to: question)?.status.confirmed != true }
+    func nextTransportIndex(at now: Date, retryOffsets: [TimeInterval]) -> Int? {
+        let eligible = outbox.indices.filter { index in
+            let item = outbox[index]
+            guard !item.status.confirmed, item.status != .unconfirmed, item.attemptCount < retryOffsets.count else { return false }
+            guard let first = item.firstAttemptAt else { return true }
+            let lastGap = item.lastAttemptAt.map { now.timeIntervalSince($0) } ?? .infinity
+            return now.timeIntervalSince(first) >= retryOffsets[item.attemptCount] && lastGap >= 8
+        }
+        return eligible.first(where: { outbox[$0].kind != .capability }) ?? eligible.first
+    }
+
+    private enum CodingKeys: String, CodingKey { case draft, outbox, receiptDigests, hubQuestions, messagingAcknowledgedProfiles }
+}
+
+enum OutboxKind: String, Codable { case report, reply, capability }
+
+struct HubQuestion: Codable, Identifiable {
+    var id: String { "\(reportID)-\(questionID)" }
+    let reportID: String
+    let questionID: String
+    let text: String
+    let receivedAt: Date
+    var seenAt: Date?
+    var replyOutboxID: String?
+}
+
+enum ReceiptApplication: Equatable {
+    case unrelated, duplicate, deliveryUpdated, questionAdded(String)
+}
+
+extension ProvisioningProfile {
+    var messagingIdentity: String { "\(region):\(origin):\(keyId):\(keyFingerprint)" }
+}
+
+// New fields use explicit defaults so an app update can recover the old encrypted history.
+extension OutboxItem {
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        origin = try values.decode(UInt32.self, forKey: .origin)
+        sequence = try values.decode(UInt32.self, forKey: .sequence)
+        createdAt = try values.decode(Date.self, forKey: .createdAt)
+        draft = try values.decode(RequestDraft.self, forKey: .draft)
+        location = try values.decodeIfPresent(LocationFix.self, forKey: .location)
+        frame = try values.decode(Data.self, forKey: .frame)
+        status = try values.decodeIfPresent(DeliveryStatus.self, forKey: .status) ?? .queued
+        firstAttemptAt = try values.decodeIfPresent(Date.self, forKey: .firstAttemptAt)
+        attemptCount = try values.decodeIfPresent(Int.self, forKey: .attemptCount) ?? 0
+        lastAttemptAt = try values.decodeIfPresent(Date.self, forKey: .lastAttemptAt)
+        receiptText = try values.decodeIfPresent(String.self, forKey: .receiptText)
+        receiptAt = try values.decodeIfPresent(Date.self, forKey: .receiptAt)
+        lastError = try values.decodeIfPresent(String.self, forKey: .lastError)
+        kind = try values.decodeIfPresent(OutboxKind.self, forKey: .kind) ?? .report
+        reportID = try values.decodeIfPresent(String.self, forKey: .reportID)
+        questionID = try values.decodeIfPresent(String.self, forKey: .questionID)
+        profileIdentity = try values.decodeIfPresent(String.self, forKey: .profileIdentity)
+    }
+}
+
+extension AppSnapshot {
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        draft = try values.decodeIfPresent(RequestDraft.self, forKey: .draft) ?? RequestDraft()
+        outbox = try values.decodeIfPresent([OutboxItem].self, forKey: .outbox) ?? []
+        receiptDigests = try values.decodeIfPresent([String: String].self, forKey: .receiptDigests) ?? [:]
+        hubQuestions = try values.decodeIfPresent([HubQuestion].self, forKey: .hubQuestions) ?? []
+        messagingAcknowledgedProfiles = try values.decodeIfPresent(Set<String>.self, forKey: .messagingAcknowledgedProfiles) ?? []
+    }
+
+    /// Applies only a receipt already authenticated and addressed by WireCodec.
+    /// Hub questions are separate from delivery status, including for reviewed reports.
+    mutating func applyReceipt(_ receipt: AuthenticatedReceipt, digest: String, at date: Date) throws -> ReceiptApplication {
+        guard receipt.status == 1 || receipt.status == 2,
+              let index = outbox.firstIndex(where: { $0.origin == receipt.requestOrigin && $0.sequence == receipt.requestSequence }) else { return .unrelated }
+        let receiptID = "\(receipt.hubOrigin)-\(receipt.hubSequence)"
+        if let old = receiptDigests[receiptID] {
+            guard old == digest else { throw MeshError.invalid("Conflicting receipt identity.") }
+            return .duplicate
+        }
+        guard receiptDigests.count < 1024 else { throw MeshError.invalid("Receipt history is full.") }
+        if let question = try FollowupWire.question(from: receipt.text) {
+            guard receipt.status == 1, outbox[index].kind == .report else { throw MeshError.invalid("Question does not refer to an original report.") }
+            let reportID = outbox[index].id
+            if let existing = hubQuestions.first(where: { $0.reportID == reportID && $0.questionID == question.id }) {
+                guard existing.text == question.text else { throw MeshError.invalid("Conflicting hub question identity.") }
+                receiptDigests[receiptID] = digest
+                return .duplicate
+            }
+            guard hubQuestions.count < 200, questions(for: reportID).count < 12 else { throw MeshError.invalid("Hub message history is full.") }
+            let saved = HubQuestion(reportID: reportID, questionID: question.id, text: question.text, receivedAt: date)
+            hubQuestions.append(saved); receiptDigests[receiptID] = digest
+            return .questionAdded(saved.id)
+        }
+        guard outbox[index].kind == .report || receipt.status == 1 else { throw MeshError.invalid("Invalid control receipt status.") }
+        if outbox[index].kind == .capability {
+            guard receipt.text == FollowupWire.capabilityAcknowledgment else { throw MeshError.invalid("The hub has not confirmed this messaging protocol.") }
+        }
+        receiptDigests[receiptID] = digest
+        if outbox[index].kind == .capability, let identity = outbox[index].profileIdentity {
+            messagingAcknowledgedProfiles.insert(identity)
+        }
+        if receipt.status == 1 && outbox[index].status == .operatorReviewed { return .deliveryUpdated }
+        outbox[index].status = receipt.status == 2 ? .operatorReviewed : .hubReceived
+        outbox[index].receiptText = receipt.text; outbox[index].receiptAt = date; outbox[index].lastError = nil
+        return .deliveryUpdated
+    }
 }
 
 enum SequenceCounter {

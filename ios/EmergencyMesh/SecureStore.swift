@@ -67,6 +67,7 @@ final class SecureStore {
     }
     func save(_ snapshot: AppSnapshot) throws {
         let data = try JSONEncoder().encode(snapshot)
+        guard data.count <= 1_999_972 else { throw MeshError.invalid("Encrypted report and message history is full. Existing data was preserved.") }
         guard let combined = try AES.GCM.seal(data, using: localKey()).combined else { throw MeshError.invalid("Cannot encrypt local outbox.") }
         try combined.write(to: url, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }

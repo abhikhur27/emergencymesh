@@ -9,6 +9,8 @@ final class LocationService: NSObject, ObservableObject, CLLocationManagerDelega
     private let manager = CLLocationManager()
     private var timeout: DispatchWorkItem?
     private var reportActive = false
+    private var replyContexts: Set<UUID> = []
+    private var active: Bool { reportActive || !replyContexts.isEmpty }
     private var updating = false
     override init() {
         super.init(); manager.delegate = self; manager.desiredAccuracy = kCLLocationAccuracyBest
@@ -19,6 +21,15 @@ final class LocationService: NSObject, ObservableObject, CLLocationManagerDelega
     // Settings or another tab automatically rechecks permission and starts a fresh fix.
     func setReportActive(_ active: Bool) {
         reportActive = active
+        updateTracking()
+    }
+    // A reply screen owns a separate foreground lease so opening it does not
+    // disable the Report screen's location state, or vice versa.
+    func setReplyActive(_ active: Bool, context: UUID) {
+        if active { replyContexts.insert(context) } else { replyContexts.remove(context) }
+        updateTracking()
+    }
+    private func updateTracking() {
         if active { request() }
         else {
             manager.stopUpdatingLocation(); updating = false
@@ -63,10 +74,10 @@ final class LocationService: NSObject, ObservableObject, CLLocationManagerDelega
     func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         if manager.authorizationStatus == .denied || manager.authorizationStatus == .restricted {
             stopForUnavailableLocation("GPS permission is off. Add a landmark in notes.")
-        } else if reportActive { request() }
+        } else if active { request() }
     }
     func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        guard reportActive else { return }
+        guard active else { return }
         let candidates = locations.map(Self.makeFix) + [fix].compactMap { $0 }
         guard let candidate = LocationFix.latestUsable(candidates) else {
             message = "No recent GPS fix yet. Add a landmark in notes."; return
@@ -74,7 +85,7 @@ final class LocationService: NSObject, ObservableObject, CLLocationManagerDelega
         timeout?.cancel(); requesting = false; fix = candidate; describe(candidate)
     }
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        guard reportActive else { return }
+        guard active else { return }
         timeout?.cancel(); requesting = false
         if let available = currentFix() { fix = available; describe(available) }
         else { message = "GPS is unavailable. Add a landmark in notes." }

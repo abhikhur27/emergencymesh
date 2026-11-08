@@ -1,0 +1,109 @@
+{
+  "fixtureIsPublicSynthetic": true,
+  "format": "RescueMesh question/reply application messages on unchanged wire v1",
+  "keyHex": "000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f",
+  "profile": {
+    "region": 1,
+    "keyId": 1,
+    "origin": 305419896
+  },
+  "reportSequence": 7,
+  "questionId": "00000abc",
+  "capability": {
+    "request": {
+      "category": 8,
+      "severity": 3,
+      "people": 1,
+      "flags": 0,
+      "createdAt": 1794000000,
+      "latitude": 0,
+      "longitude": 0,
+      "accuracy": 65535,
+      "battery": 255,
+      "note": "RMC1|Q1"
+    },
+    "envelope": {
+      "region": 1,
+      "keyId": 1,
+      "origin": 305419896,
+      "sequence": 8,
+      "hops": 3
+    },
+    "nonceHex": "000102030405060708090a0b",
+    "frameHex": "454d0101010078563412080000000301000102030405060708090a0b4f01d71b45a12c718d41978bb1e9786d7c297833a2361c4d4436d4892919017beea6ca03f1be3d83405aed"
+  },
+  "question": {
+    "receipt": {
+      "requestOrigin": 305419896,
+      "requestSequence": 7,
+      "status": 1,
+      "text": "RMQ1|00000abc|Which building are you near?"
+    },
+    "envelope": {
+      "region": 1,
+      "keyId": 1,
+      "origin": 287454020,
+      "sequence": 10,
+      "hops": 3
+    },
+    "nonceHex": "101112131415161718191a1b",
+    "frameHex": "454d01020100443322110a0000000301101112131415161718191a1b05a8ac044ec93ab3cb5f5a505e481563e7607e3e7aa034cdb0918b04367436ae3985336a9bc14e8e0c53b228e5ed337576dd354cb04df43a9123467c0a127ad1ae7df938"
+  },
+  "reply": {
+    "request": {
+      "category": 1,
+      "severity": 1,
+      "people": 3,
+      "flags": 0,
+      "createdAt": 1794000000,
+      "latitude": 0,
+      "longitude": 0,
+      "accuracy": 65535,
+      "battery": 255,
+      "note": "RMR1|00000007|00000abc|At ECSW west entrance."
+    },
+    "envelope": {
+      "region": 1,
+      "keyId": 1,
+      "origin": 305419896,
+      "sequence": 9,
+      "hops": 3
+    },
+    "nonceHex": "202122232425262728292a2b",
+    "frameHex": "454d0101010078563412090000000301202122232425262728292a2bd33ba570ecdcf4641a7c42cec118f4f92fb613b1d5cd31df10c65c2279ba6e3942f2d534be1505bb769e12d32c295a8bb17dccf9ff4f5941ab0c0b6f2ddc69b8f6d4e9d5201690a96f8082e46f3a54f9bd"
+  },
+  "replyAcknowledgment": {
+    "receipt": {
+      "requestOrigin": 305419896,
+      "requestSequence": 9,
+      "status": 1,
+      "text": "Your reply was saved by the hub."
+    },
+    "envelope": {
+      "region": 1,
+      "keyId": 1,
+      "origin": 287454020,
+      "sequence": 11,
+      "hops": 3
+    },
+    "nonceHex": "303132333435363738393a3b",
+    "frameHex": "454d01020100443322110b0000000301303132333435363738393a3bcb6305d2e06f4a032b13d78367eb1e1af957232ee349257607cd303a8dd75e5c3a40780c49e0f3d2cc0ac25654bdd1d3cf9e417ca7b0153c6755"
+  },
+  "capabilityAcknowledgment": {
+    "receipt": {
+      "requestOrigin": 305419896,
+      "requestSequence": 8,
+      "status": 1,
+      "text": "RMC1|Q1|OK"
+    },
+    "envelope": {
+      "region": 1,
+      "keyId": 1,
+      "origin": 287454020,
+      "sequence": 12,
+      "hops": 3
+    },
+    "nonceHex": "404142434445464748494a4b",
+    "frameHex": "454d01020100443322110c0000000301404142434445464748494a4b9aef9a312e3c8703ccce457bd8556f0a48ba1d17a50e16097cdc8d65371be2ca770bdb66"
+  }
+}

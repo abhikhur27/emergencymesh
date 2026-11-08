@@ -227,4 +227,257 @@ final class WireCodecTests: XCTestCase {
         XCTAssertEqual(restored.outbox.first?.draft.supplies, draft.supplies)
         XCTAssertEqual(try WireCodec.open(try XCTUnwrap(restored.outbox.first?.frame), profile: profile, expectedType: 1), plaintext)
     }
+
+    private func followupItem(sequence: UInt32 = 42, note: String = "Original report") throws -> OutboxItem {
+        let date = Date(timeIntervalSince1970: 1794000000)
+        let draft = RequestDraft(category: .medical, severity: .urgent, people: 3, breathingConcern: true, supplies: [.medicine, .water], note: note)
+        let plain = try WireCodec.requestPlaintext(draft: draft, location: nil, battery: 77, createdAt: date)
+        return OutboxItem(origin: profile.origin, sequence: sequence, createdAt: date, draft: draft, location: nil,
+                          frame: try WireCodec.seal(type: 1, plaintext: plain, profile: profile, sequence: sequence))
+    }
+    private func followupReceipt(text: String, requestSequence: UInt32 = 42, hubSequence: UInt32 = 100, status: UInt8 = 1) -> AuthenticatedReceipt {
+        AuthenticatedReceipt(hubOrigin: 0x99999999, hubSequence: hubSequence, requestOrigin: profile.origin,
+                             requestSequence: requestSequence, status: status, text: text)
+    }
+    private func followupReceiptFrame(text: String, requestSequence: UInt32 = 42, origin: UInt32? = nil) throws -> Data {
+        var plain = Data(); plain.appendLE(origin ?? profile.origin); plain.appendLE(requestSequence)
+        plain.append(1); plain.append(UInt8(text.utf8.count)); plain.append(contentsOf: text.utf8)
+        let hub = ProvisioningProfile(region: profile.region, keyId: profile.keyId, keyHex: key, origin: 0x99999999)
+        return try WireCodec.seal(type: 2, plaintext: plain, profile: hub, sequence: 100)
+    }
+    func testFollowupQuestionAndAnswerFitUnchangedFirmwareLimits() throws {
+        let question = try FollowupWire.questionText(id: "00000001", text: String(repeating: "é", count: 33))
+        XCTAssertEqual(question.utf8.count, 80)
+        let frame = try followupReceiptFrame(text: question)
+        XCTAssertEqual(frame.count, 134)
+        let parsed = try FollowupWire.question(from: WireCodec.receipt(frame, profile: profile).text)
+        XCTAssertEqual(parsed?.id, "00000001"); XCTAssertEqual(parsed?.text.utf8.count, 66)
+        XCTAssertThrowsError(try FollowupWire.questionText(id: "00000001", text: String(repeating: "é", count: 34)))
+        let original = try followupItem()
+        let answer = String(repeating: "é", count: 48) + "a"
+        let draft = try FollowupWire.replyDraft(original: original.draft, reportSequence: 42, questionID: "00000001", text: answer)
+        XCTAssertEqual(draft.note.utf8.count, 120)
+        XCTAssertEqual(FollowupWire.answerText(from: draft.note), answer)
+        XCTAssertTrue(draft.supplies.isEmpty); XCTAssertFalse(draft.breathingConcern)
+        let date = Date(timeIntervalSince1970: 1794000010)
+        let plain = try WireCodec.requestPlaintext(draft: draft, location: nil, battery: 77, createdAt: date)
+        XCTAssertEqual(try WireCodec.seal(type: 1, plaintext: plain, profile: profile, sequence: 43).count, 184)
+        XCTAssertThrowsError(try FollowupWire.answerNote(reportSequence: 42, questionID: "00000001", text: answer + "x"))
+    }
+    func testReviewedReportStillReceivesQuestionWithoutReceiptDowngrade() throws {
+        var item = try followupItem(); item.status = .operatorReviewed
+        let reviewedAt = Date(timeIntervalSince1970: 1794000005)
+        item.receiptText = "Reviewed by operator"; item.receiptAt = reviewedAt
+        var state = AppSnapshot(); state.outbox = [item]
+        let now = reviewedAt.addingTimeInterval(5)
+        let text = try FollowupWire.questionText(id: "00000001", text: "Which entrance are you near?")
+        let first = try state.applyReceipt(followupReceipt(text: text), digest: "first", at: now)
+        XCTAssertEqual(first, .questionAdded("\(item.id)-00000001"))
+        XCTAssertEqual(state.outbox[0].status, .operatorReviewed)
+        XCTAssertEqual(state.outbox[0].receiptText, "Reviewed by operator")
+        XCTAssertEqual(state.outbox[0].receiptAt, reviewedAt)
+        XCTAssertEqual(try state.applyReceipt(followupReceipt(text: text), digest: "first", at: now.addingTimeInterval(10)), .duplicate)
+        XCTAssertEqual(try state.applyReceipt(followupReceipt(text: text, hubSequence: 101), digest: "retry", at: now.addingTimeInterval(20)), .duplicate)
+        XCTAssertEqual(state.hubQuestions.count, 1); XCTAssertEqual(state.hubQuestions[0].receivedAt, now)
+        XCTAssertNil(state.hubQuestions[0].seenAt)
+        let changed = try FollowupWire.questionText(id: "00000001", text: "Changed question")
+        XCTAssertThrowsError(try state.applyReceipt(followupReceipt(text: changed, hubSequence: 102), digest: "changed", at: now))
+        XCTAssertNil(state.receiptDigests["2576980377-102"])
+        XCTAssertEqual(state.outbox[0].frame, item.frame)
+    }
+    func testFollowupRecipientAndOriginalReportBindingFailClosed() throws {
+        let text = try FollowupWire.questionText(id: "00000001", text: "Please name a landmark.")
+        XCTAssertThrowsError(try WireCodec.receipt(followupReceiptFrame(text: text, origin: 99), profile: profile))
+        let sibling = ProvisioningProfile(region: 1, keyId: 1, keyHex: String(repeating: "22", count: 32), origin: 99)
+        XCTAssertThrowsError(try WireCodec.receipt(followupReceiptFrame(text: text), profile: sibling))
+        var state = AppSnapshot(); var control = try followupItem(sequence: 43); control.kind = .capability
+        state.outbox = [control]
+        XCTAssertThrowsError(try state.applyReceipt(followupReceipt(text: text, requestSequence: 43), digest: "control", at: Date()))
+        XCTAssertEqual(try state.applyReceipt(followupReceipt(text: text), digest: "unrelated", at: Date()), .unrelated)
+        XCTAssertTrue(state.hubQuestions.isEmpty); XCTAssertTrue(state.receiptDigests.isEmpty)
+    }
+    func testControlAndReplyReceiptsDoNotCreateOrChangeReports() throws {
+        let report = try followupItem()
+        var capability = try followupItem(sequence: 43, note: FollowupWire.capabilityNote)
+        capability.kind = .capability; capability.profileIdentity = profile.messagingIdentity
+        var reply = try followupItem(sequence: 44, note: FollowupWire.answerNote(reportSequence: 42, questionID: "00000001", text: "West entrance"))
+        reply.kind = .reply; reply.reportID = report.id; reply.questionID = "00000001"
+        var state = AppSnapshot(); state.outbox = [report, capability, reply]
+        state.hubQuestions = [HubQuestion(reportID: report.id, questionID: "00000001", text: "Which entrance?", receivedAt: Date(), replyOutboxID: reply.id)]
+        XCTAssertEqual(state.reports.count, 1)
+        _ = try state.applyReceipt(followupReceipt(text: FollowupWire.capabilityAcknowledgment, requestSequence: 43, hubSequence: 101), digest: "cap", at: Date())
+        XCTAssertTrue(state.messagingAcknowledgedProfiles.contains(profile.messagingIdentity))
+        XCTAssertTrue(state.needsReply(state.hubQuestions[0]))
+        _ = try state.applyReceipt(followupReceipt(text: "Reply saved", requestSequence: 44, hubSequence: 102), digest: "reply", at: Date())
+        XCTAssertFalse(state.needsReply(state.hubQuestions[0]))
+        XCTAssertEqual(state.reply(to: state.hubQuestions[0])?.status, .hubReceived)
+        XCTAssertEqual(state.outbox[0].frame, report.frame); XCTAssertEqual(state.outbox[0].draft, report.draft)
+        XCTAssertEqual(state.outbox[0].status, .queued); XCTAssertEqual(state.reports.count, 1)
+    }
+    func testLegacySnapshotDefaultsNewKindsAndConversationFields() throws {
+        let item = try followupItem()
+        var state = AppSnapshot(); state.outbox = [item]
+        var old = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(state)) as? [String: Any])
+        old.removeValue(forKey: "hubQuestions"); old.removeValue(forKey: "messagingAcknowledgedProfiles")
+        var oldItems = try XCTUnwrap(old["outbox"] as? [[String: Any]])
+        for field in ["kind", "reportID", "questionID", "profileIdentity"] { oldItems[0].removeValue(forKey: field) }
+        old["outbox"] = oldItems
+        let restored = try JSONDecoder().decode(AppSnapshot.self, from: JSONSerialization.data(withJSONObject: old))
+        XCTAssertEqual(restored.outbox[0].kind, .report)
+        XCTAssertEqual(restored.reports.count, 1); XCTAssertTrue(restored.hubQuestions.isEmpty)
+        XCTAssertTrue(restored.messagingAcknowledgedProfiles.isEmpty)
+        XCTAssertEqual(restored.outbox[0].frame, item.frame)
+    }
+    func testFollowupGrammarRejectsMalformedAndNoncanonicalText() throws {
+        XCTAssertNil(try FollowupWire.question(from: "Hub received"))
+        XCTAssertTrue(FollowupWire.isReservedRequestNote("RMC1|Q1"))
+        XCTAssertTrue(FollowupWire.isReservedRequestNote("RMR1|0000002a|00000001|West"))
+        XCTAssertFalse(FollowupWire.isReservedRequestNote("West entrance"))
+        for text in ["RMQ1|00000000|Where?", "RMQ1|0000000A|Where?", "RMQ1|000000001|Where?", "RMQ1|00000001|", "RMQ1|00000001| Where?", "RMQ1|00000001|Where? ", "RMQ1|00000001|Line\nbreak", "RMQ1|00000001|Bad\u{0000}text"] {
+            XCTAssertThrowsError(try FollowupWire.question(from: text), text)
+        }
+        XCTAssertThrowsError(try FollowupWire.answerNote(reportSequence: 0, questionID: "00000001", text: "West"))
+        XCTAssertThrowsError(try FollowupWire.answerNote(reportSequence: 42, questionID: "00000001", text: "Line\nbreak"))
+        XCTAssertEqual(try FollowupWire.answerNote(reportSequence: 42, questionID: "00000001", text: "  West | lobby  "), "RMR1|0000002a|00000001|West | lobby")
+        XCTAssertEqual(FollowupWire.answerText(from: "RMR1|0000002a|00000001|West | lobby"), "West | lobby")
+    }
+    func testReplyUsesNewSequenceAndFreshGPSWithoutChangingOriginalReport() throws {
+        let original = try followupItem(); let originalBytes = original.frame
+        let date = Date(timeIntervalSince1970: 1794000010)
+        let draft = try FollowupWire.replyDraft(original: original.draft, reportSequence: original.sequence, questionID: "00000001", text: "West entrance")
+        let fix = LocationFix(latitude: 32.9861, longitude: -96.7514, accuracy: 9, capturedAt: date)
+        let plain = try WireCodec.requestPlaintext(draft: draft, location: fix, battery: 77, createdAt: date)
+        let first = try WireCodec.seal(type: 1, plaintext: plain, profile: profile, sequence: 43)
+        let second = try WireCodec.seal(type: 1, plaintext: plain, profile: profile, sequence: 44)
+        XCTAssertEqual(plain[3], 1); XCTAssertEqual(try first.readLE(UInt32.self, at: 10), 43)
+        XCTAssertNotEqual(first.subdata(in: 16..<28), second.subdata(in: 16..<28))
+        XCTAssertEqual(try WireCodec.open(first, profile: profile, expectedType: 1), plain)
+        XCTAssertEqual(original.frame, originalBytes); XCTAssertEqual(original.draft.note, "Original report")
+    }
+    func testHubQuestionRetentionAndReceiptCollisionAreBounded() throws {
+        var state = AppSnapshot(); state.outbox = [try followupItem()]
+        for number in UInt32(1)...12 {
+            let text = try FollowupWire.questionText(id: String(format: "%08x", number), text: "Where are you?")
+            _ = try state.applyReceipt(followupReceipt(text: text, hubSequence: number), digest: "digest-\(number)", at: Date())
+        }
+        XCTAssertEqual(state.hubQuestions.count, 12)
+        let extra = try FollowupWire.questionText(id: "0000000d", text: "Where are you?")
+        XCTAssertThrowsError(try state.applyReceipt(followupReceipt(text: extra, hubSequence: 13), digest: "extra", at: Date()))
+        XCTAssertEqual(state.hubQuestions.count, 12)
+        XCTAssertThrowsError(try state.applyReceipt(followupReceipt(text: extra, hubSequence: 1), digest: "conflict", at: Date()))
+        XCTAssertEqual(state.receiptDigests["2576980377-1"], "digest-1")
+    }
+    func testSetupControlDoesNotStarveQueuedReportAndRetriesKeepSavedBytes() throws {
+        var control = try followupItem(sequence: 43, note: FollowupWire.capabilityNote); control.kind = .capability
+        let report = try followupItem()
+        var state = AppSnapshot(); state.outbox = [control, report]
+        let now = Date(timeIntervalSince1970: 1794000020)
+        XCTAssertEqual(state.nextTransportIndex(at: now, retryOffsets: [0, 10, 25, 45]), 1)
+        state.outbox[1].status = .hubReceived
+        XCTAssertEqual(state.nextTransportIndex(at: now, retryOffsets: [0, 10, 25, 45]), 0)
+        state.outbox[0].status = .submitted; state.outbox[0].attemptCount = 1
+        state.outbox[0].firstAttemptAt = now; state.outbox[0].lastAttemptAt = now
+        XCTAssertNil(state.nextTransportIndex(at: now.addingTimeInterval(7), retryOffsets: [0, 10, 25, 45]))
+        XCTAssertEqual(state.nextTransportIndex(at: now.addingTimeInterval(10), retryOffsets: [0, 10, 25, 45]), 0)
+        let restored = try JSONDecoder().decode(AppSnapshot.self, from: JSONEncoder().encode(state))
+        XCTAssertEqual(restored.outbox[0].frame, control.frame); XCTAssertEqual(restored.outbox[0].kind, .capability)
+        XCTAssertEqual(restored.reports.count, 1)
+    }
+    func testCapabilityRequiresExactVersionedAcknowledgment() throws {
+        var capability = try followupItem(sequence: 43, note: FollowupWire.capabilityNote)
+        capability.kind = .capability; capability.profileIdentity = profile.messagingIdentity
+        var state = AppSnapshot(); state.outbox = [capability]
+        for text in ["Hub received", "Messaging enabled", "RMC1|Q2|OK", "RMC1|Q1|OK "] {
+            XCTAssertThrowsError(try state.applyReceipt(followupReceipt(text: text, requestSequence: 43), digest: "invalid", at: Date()))
+            XCTAssertTrue(state.messagingAcknowledgedProfiles.isEmpty)
+            XCTAssertTrue(state.receiptDigests.isEmpty)
+            XCTAssertEqual(state.outbox[0].status, .queued)
+        }
+        XCTAssertThrowsError(try state.applyReceipt(followupReceipt(text: FollowupWire.capabilityAcknowledgment, requestSequence: 43, status: 2), digest: "wrong-status", at: Date()))
+        _ = try state.applyReceipt(followupReceipt(text: FollowupWire.capabilityAcknowledgment, requestSequence: 43), digest: "valid", at: Date())
+        XCTAssertEqual(state.outbox[0].status, .hubReceived)
+        XCTAssertTrue(state.messagingAcknowledgedProfiles.contains(profile.messagingIdentity))
+        XCTAssertEqual(state.receiptDigests.count, 1)
+        XCTAssertTrue(state.reports.isEmpty); XCTAssertTrue(state.hubQuestions.isEmpty)
+    }
+    func testFollowupMessagesMatchSharedNodeGoldenVectors() throws {
+        let url = try XCTUnwrap(Bundle(for: Self.self).url(forResource: "followup-v1", withExtension: "json"))
+        let fixture = try JSONDecoder().decode(NodeFollowupFixture.self, from: Data(contentsOf: url))
+        XCTAssertTrue(fixture.fixtureIsPublicSynthetic)
+        let phone = ProvisioningProfile(region: fixture.profile.region, keyId: fixture.profile.keyId,
+                                        keyHex: fixture.keyHex, origin: fixture.profile.origin)
+        let vectors: [(String, NodeFollowupFixture.Entry)] = [
+            ("capability", fixture.capability), ("capabilityAcknowledgment", fixture.capabilityAcknowledgment),
+            ("question", fixture.question), ("reply", fixture.reply), ("replyAcknowledgment", fixture.replyAcknowledgment)
+        ]
+        for (name, vector) in vectors {
+            let envelope = vector.envelope
+            let sender = ProvisioningProfile(region: envelope.region, keyId: envelope.keyId,
+                                             keyHex: fixture.keyHex, origin: envelope.origin)
+            let expected = try XCTUnwrap(Data(hex: vector.frameHex), name)
+            let nonce = try XCTUnwrap(Data(hex: vector.nonceHex), name)
+            let plaintext: Data
+            let type: UInt8
+            if let request = vector.request {
+                XCTAssertNil(vector.receipt, name)
+                let date = Date(timeIntervalSince1970: Double(request.createdAt))
+                let selected = Set(SupplyNeed.allCases.filter { request.flags & $0.rawValue != 0 })
+                let draft = RequestDraft(category: try XCTUnwrap(EmergencyCategory(rawValue: request.category)),
+                                         severity: try XCTUnwrap(ReportedSeverity(rawValue: request.severity)), people: Int(request.people),
+                                         breathingConcern: request.flags & 2 != 0, trapped: request.flags & 4 != 0,
+                                         severeBleeding: request.flags & 8 != 0, supplies: selected, note: request.note)
+                let location = request.flags & 1 == 0 ? nil : LocationFix(latitude: Double(request.latitude) / 100_000,
+                    longitude: Double(request.longitude) / 100_000, accuracy: Double(request.accuracy), capturedAt: date)
+                plaintext = try WireCodec.requestPlaintext(draft: draft, location: location, battery: request.battery, createdAt: date)
+                XCTAssertEqual(plaintext[3], request.flags, name)
+                XCTAssertEqual(try plaintext.readLE(Int32.self, at: 8), request.latitude, name)
+                XCTAssertEqual(try plaintext.readLE(Int32.self, at: 12), request.longitude, name)
+                XCTAssertEqual(try plaintext.readLE(UInt16.self, at: 16), request.accuracy, name)
+                type = 1
+            } else {
+                let receipt = try XCTUnwrap(vector.receipt, name)
+                var data = Data(); data.appendLE(receipt.requestOrigin); data.appendLE(receipt.requestSequence)
+                data.append(receipt.status); data.append(UInt8(receipt.text.utf8.count)); data.append(contentsOf: receipt.text.utf8)
+                plaintext = data; type = 2
+                let decoded = try WireCodec.receipt(expected, profile: phone)
+                XCTAssertEqual(decoded.requestOrigin, receipt.requestOrigin, name)
+                XCTAssertEqual(decoded.requestSequence, receipt.requestSequence, name)
+                XCTAssertEqual(decoded.hubOrigin, envelope.origin, name)
+                XCTAssertEqual(decoded.hubSequence, envelope.sequence, name)
+                XCTAssertEqual(decoded.status, receipt.status, name); XCTAssertEqual(decoded.text, receipt.text, name)
+            }
+            let sealed = try WireCodec.seal(type: type, plaintext: plaintext, profile: sender, sequence: envelope.sequence,
+                                            hops: envelope.hops, nonce: nonce)
+            XCTAssertEqual(sealed, expected, name)
+            XCTAssertEqual(try WireCodec.open(expected, profile: phone, expectedType: type), plaintext, name)
+        }
+        XCTAssertEqual(fixture.capability.request?.note, FollowupWire.capabilityNote)
+        XCTAssertEqual(fixture.capabilityAcknowledgment.receipt?.text, FollowupWire.capabilityAcknowledgment)
+        let question = try XCTUnwrap(FollowupWire.question(from: fixture.question.receipt?.text ?? ""))
+        XCTAssertEqual(question.id, fixture.questionId)
+        let answer = try XCTUnwrap(FollowupWire.answerText(from: fixture.reply.request?.note ?? ""))
+        XCTAssertEqual(try FollowupWire.answerNote(reportSequence: fixture.reportSequence, questionID: fixture.questionId, text: answer), fixture.reply.request?.note)
+    }
+}
+
+// Public Node-generated vectors are also consumed by the hub's protocol tests.
+private struct NodeFollowupFixture: Decodable {
+    let fixtureIsPublicSynthetic: Bool
+    let keyHex: String
+    let profile: Profile
+    let reportSequence: UInt32
+    let questionId: String
+    let capability: Entry
+    let capabilityAcknowledgment: Entry
+    let question: Entry
+    let reply: Entry
+    let replyAcknowledgment: Entry
+    struct Profile: Decodable { let region: UInt16; let keyId: UInt8; let origin: UInt32 }
+    struct Envelope: Decodable { let region: UInt16; let keyId: UInt8; let origin: UInt32; let sequence: UInt32; let hops: UInt8 }
+    struct Request: Decodable {
+        let category: UInt8; let severity: UInt8; let people: UInt8; let flags: UInt8; let createdAt: UInt32
+        let latitude: Int32; let longitude: Int32; let accuracy: UInt16; let battery: UInt8; let note: String
+    }
+    struct Receipt: Decodable { let requestOrigin: UInt32; let requestSequence: UInt32; let status: UInt8; let text: String }
+    struct Entry: Decodable { let request: Request?; let receipt: Receipt?; let envelope: Envelope; let nonceHex: String; let frameHex: String }
 }

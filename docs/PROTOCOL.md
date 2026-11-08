@@ -72,6 +72,25 @@ Receipt plaintext is 10–90 bytes; the full frame is 54–134 bytes. Envelope o
 
 The hub persists a receipt before inference or regional work. Duplicates resend the saved receipt without creating another incident. Status 2 requires human review; automatic regional allocation does not fabricate it. Neither status means real emergency services were dispatched. Regional service acknowledgments are separate application records.
 
+## Bidirectional operator messages
+
+Questions and answers reuse the authenticated v1 request/receipt envelopes. Existing v1 firmware forwards their opaque bytes unchanged; this feature requires an updated phone app and hub software, without a firmware reflash or new packet type.
+
+| Message | Carrier and exact text grammar |
+| --- | --- |
+| Phone capability | Type 1 note exactly `RMC1\|Q1`; category 8, priority 3, people 1, flags 0, battery 255, unknown location |
+| Capability acknowledgment | Type 2, status 1, text exactly `RMC1\|Q1\|OK`, referencing the capability request's own sequence |
+| Operator question | Type 2, status 1, text `RMQ1\|<questionId>\|<question>`, referencing the original report's origin and sequence |
+| Phone answer | Type 1 note `RMR1\|<reportSequence>\|<questionId>\|<answer>`, with a new persisted phone sequence |
+
+Both identifiers in control text are exactly eight lowercase hexadecimal digits and nonzero. Question text is at most 66 UTF-8 bytes (14-byte prefix); answer text is at most 97 bytes (23-byte prefix). Thus the existing 80-byte receipt and 120-byte note limits remain unchanged. Text must be nonempty, valid UTF-8, already trimmed, and contain no C0 or DEL controls, including newlines; encoding never silently truncates it.
+
+The phone enables messaging only after authenticating the exact versioned capability acknowledgment. The hub durably records capability per `(region, origin, keyId)` and will not send questions to older apps. Questions use that phone's registered key; a relay or another enrolled phone cannot read them. The original report, question and answer must belong to the same enrolled origin/key. Unknown questions and malformed reserved controls fail closed after authentication, timestamp, rate and replay checks. Control traffic never creates an incident or triggers inference or resource allocation.
+
+An answer preserves the original report and includes fresh authorized GPS when available as separate answer context. The hub saves it before sending a normal status-1 receipt referencing the answer's new sequence. This receipt confirms the saved answer, not an operator review. The app handles questions separately from the original report's receipt state.
+
+The hub saves each sealed question before transmission and retries the identical bytes at 0, 10, 25 and 45 seconds, subject to radio readiness and a persistent limit of eight question transmissions per minute with two-second spacing. Status progresses from `queued` to `submitted-to-radio`; no answer after bounded attempts becomes `unconfirmed`, never proof of delivery. One unanswered question per incident and eight globally may be pending; each incident retains at most twelve questions. Explicit closure stops retries and frees capacity. A valid late answer remains accepted and acknowledged without reopening the closed question or changing another question. Duplicate requests return their cached receipts across restart; conflicting reuse of an identity is rejected. Questions originate from an authenticated human operator, locally or through regional coordination.
+
 ## BLE
 
 The companion advertises Nordic UART service `6E400001-B5A3-F393-E0A9-E50E24DCCA9E`. The phone writes RX `6E400002-B5A3-F393-E0A9-E50E24DCCA9E` **with response**, and subscribes to TX `6E400003-B5A3-F393-E0A9-E50E24DCCA9E` notifications. Hub firmware disables BLE by default so the phone cannot select the receiving hub as its companion.

@@ -7,6 +7,7 @@ private let campusTitle = "UT Dallas · ECSW"
 private enum RequestRoute: Hashable {
     case receipt(String)
 }
+private struct HubReportLink: Identifiable { let id: String }
 
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
@@ -16,6 +17,7 @@ struct ContentView: View {
     @State private var path: [RequestRoute] = []
     @State private var showingDevices = false
     @State private var submitting = false
+    @State private var showingHubReport: HubReportLink?
     @FocusState private var notesFocused: Bool
 
     var body: some View {
@@ -31,13 +33,34 @@ struct ContentView: View {
             .tabItem { Label("Report", systemImage: "cross.case") }.tag(0)
             NavigationStack { RequestHistoryView() }
                 .tabItem { Label("My requests", systemImage: "tray") }.tag(1)
+                .badge(model.unansweredHubQuestionCount)
             NavigationStack { TemocView() }
                 .tabItem { Label("Temoc", systemImage: "bubble.left.and.bubble.right") }.tag(3)
             NavigationStack { SetupView() }
                 .tabItem { Label("Setup", systemImage: "gearshape") }.tag(2)
         }
         .tint(rescueMagenta)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if let reportID = model.unreadHubReportID {
+                Button { notesFocused = false; showingHubReport = HubReportLink(id: reportID) } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "bubble.left.and.bubble.right.fill")
+                        Text("Hub needs information").font(.subheadline.weight(.semibold))
+                        Spacer(minLength: 8)
+                        Text("View").font(.subheadline.weight(.semibold))
+                        Image(systemName: "chevron.right").font(.caption.weight(.semibold))
+                    }.padding(.horizontal, 18).frame(minHeight: 48)
+                        .foregroundStyle(rescueMagenta).background(Color(uiColor: .systemBackground))
+                }.buttonStyle(.plain).accessibilityLabel("Hub needs information. Open the request to reply.")
+            }
+        }
         .sheet(isPresented: $showingDevices) { DevicePicker().environmentObject(model) }
+        .sheet(item: $showingHubReport) { report in
+            NavigationStack {
+                RequestStatusView(id: report.id)
+                    .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { showingHubReport = nil } } }
+            }.environmentObject(model)
+        }
         .alert("Could not complete action", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
             Button("OK", role: .cancel) { model.errorMessage = nil }
         } message: { Text(model.errorMessage ?? "") }
@@ -370,6 +393,10 @@ private struct RequestHistoryView: View {
                         VStack(alignment: .leading, spacing: 5) {
                             Text(item.draft.category.title).font(.headline)
                             Text(item.status.title).font(.subheadline)
+                            if model.needsReply(for: item.id) {
+                                Label("Hub needs information", systemImage: "bubble.left.and.bubble.right")
+                                    .font(.subheadline.weight(.semibold)).foregroundStyle(rescueMagenta)
+                            }
                             Text(item.createdAt.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(.secondary)
                         }
                     }.padding(.vertical, 8)
@@ -382,7 +409,9 @@ private struct RequestHistoryView: View {
 
 private struct RequestStatusView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showingDevices = false
+    @State private var locationContext = UUID()
     let id: String
 
     var body: some View {
@@ -400,6 +429,7 @@ private struct RequestStatusView: View {
                     Text(statusExplanation(item.status)).font(.subheadline)
                         .frame(maxWidth: .infinity, alignment: .leading).padding(14)
                         .background(rescueMagenta.opacity(0.09), in: RoundedRectangle(cornerRadius: 10))
+                    if !model.questions(for: id).isEmpty { HubConversationView(reportID: id) }
                     RequestSummary(draft: item.draft, location: item.location)
                     if let error = item.lastError { Text(error).font(.subheadline).foregroundStyle(Color.red) }
                     if item.status == .unconfirmed {
@@ -427,6 +457,13 @@ private struct RequestStatusView: View {
         }
         .navigationTitle("My request").privacySensitive()
         .sheet(isPresented: $showingDevices) { DevicePicker().environmentObject(model) }
+        .onAppear { model.markHubQuestionsSeen(for: id); updateReplyLocation() }
+        .onChange(of: model.questions(for: id).count) { _, _ in model.markHubQuestionsSeen(for: id); updateReplyLocation() }
+        .onChange(of: scenePhase) { _, _ in updateReplyLocation() }
+        .onDisappear { model.location.setReplyActive(false, context: locationContext) }
+    }
+    private func updateReplyLocation() {
+        model.location.setReplyActive(scenePhase == .active && !model.questions(for: id).isEmpty, context: locationContext)
     }
 
     private func statusExplanation(_ status: DeliveryStatus) -> String {
@@ -437,6 +474,59 @@ private struct RequestStatusView: View {
         case .hubReceived: return "Your local hub received the request. An operator has not marked it reviewed."
         case .operatorReviewed: return "An operator marked this request reviewed at the hub."
         }
+    }
+}
+
+private struct HubConversationView: View {
+    @EnvironmentObject private var model: AppModel
+    @State private var answers: [String: String] = [:]
+    let reportID: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Label("Messages from hub", systemImage: "bubble.left.and.bubble.right")
+                .font(.title3.bold()).accessibilityAddTraits(.isHeader)
+            ForEach(model.questions(for: reportID)) { question in
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(question.text).font(.headline).textSelection(.enabled)
+                    Text(question.receivedAt.formatted(date: .omitted, time: .shortened))
+                        .font(.caption).foregroundStyle(.secondary)
+                    if let reply = model.reply(to: question) {
+                        Divider()
+                        Text("Your reply").font(.subheadline.weight(.semibold))
+                        Text(FollowupWire.answerText(from: reply.draft.note) ?? "Saved reply")
+                            .textSelection(.enabled)
+                        Label(reply.status.confirmed ? "Reply received by hub" : reply.status == .unconfirmed ? "Reply delivery unconfirmed" : "Reply saved · waiting for hub", systemImage: reply.status.confirmed ? "checkmark.circle" : "clock")
+                            .font(.subheadline).foregroundStyle(.secondary)
+                        if reply.status == .unconfirmed {
+                            Button("Retry saved reply") { model.retry(reply.id) }
+                                .buttonStyle(.bordered).frame(minHeight: 44)
+                        }
+                        if let error = reply.lastError { Text(error).font(.subheadline).foregroundStyle(Color.red) }
+                    } else {
+                        TextField("Your reply", text: Binding(get: { answers[question.id] ?? "" }, set: { answers[question.id] = $0 }), axis: .vertical)
+                            .lineLimit(1...3).textFieldStyle(.roundedBorder).accessibilityLabel("Reply to: \(question.text)")
+                        HStack {
+                            Text("One short line").foregroundStyle(.secondary)
+                            Spacer()
+                            Text("\((answers[question.id] ?? "").utf8.count)/97 bytes")
+                                .monospacedDigit().foregroundStyle((answers[question.id] ?? "").utf8.count > FollowupWire.answerLimit ? Color.red : Color.secondary)
+                        }.font(.caption)
+                        Button {
+                            if model.queueReply(questionID: question.id, text: answers[question.id] ?? "") != nil { answers[question.id] = "" }
+                        } label: { Label("Send reply", systemImage: "paperplane.fill").frame(maxWidth: .infinity, minHeight: 44) }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(!model.storageReady || !validAnswer(answers[question.id] ?? ""))
+                        Text(model.radio.ready ? "Encrypted for your hub. Available GPS attaches automatically." : "Saved securely; sends when your companion connects.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                }.padding(16).frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+            }
+        }
+    }
+    private func validAnswer(_ value: String) -> Bool {
+        (try? FollowupWire.canonicalText(FollowupWire.trimmed(value), limit: FollowupWire.answerLimit)) != nil
     }
 }
 
@@ -507,6 +597,15 @@ private struct SetupView: View {
                 }.frame(minHeight: 44)
                 Text(model.radio.status).font(.subheadline).foregroundStyle(.secondary)
             } header: { Text("Radio connection") }
+            Section {
+                Label(model.messagingStatus, systemImage: model.messagingReady ? "checkmark.bubble" : "bubble.left.and.bubble.right")
+                if model.profile != nil && !model.messagingReady {
+                    Button("Retry messaging setup") { model.retryMessagingSetup() }
+                        .disabled(!model.radio.ready).frame(minHeight: 44)
+                }
+            } header: { Text("Hub messages") } footer: {
+                Text("The updated hub can ask about your saved request. Questions and replies stay separate from Temoc chats.")
+            }
             Section {
                 DisclosureGroup("How delivery works") {
                     Text("Your phone sends through Bluetooth to your companion. LoRa relays carry the encrypted request to the local hub.")

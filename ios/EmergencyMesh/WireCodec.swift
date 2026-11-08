@@ -64,6 +64,55 @@ enum WireCodec {
     }
 }
 
+/// Reserved text extensions inside the unchanged authenticated v1 request/receipt envelopes.
+enum FollowupWire {
+    static let capabilityNote = "RMC1|Q1"
+    static let capabilityAcknowledgment = "RMC1|Q1|OK"
+    static let questionLimit = 66
+    static let answerLimit = 97
+    private static let trimSet = CharacterSet(charactersIn: "\u{0009}\u{000A}\u{000B}\u{000C}\u{000D}\u{0020}\u{00A0}\u{1680}\u{2000}\u{2001}\u{2002}\u{2003}\u{2004}\u{2005}\u{2006}\u{2007}\u{2008}\u{2009}\u{200A}\u{2028}\u{2029}\u{202F}\u{205F}\u{3000}\u{FEFF}")
+    struct Question: Equatable { let id: String; let text: String }
+    static func trimmed(_ value: String) -> String { value.trimmingCharacters(in: trimSet) }
+    static func isReservedRequestNote(_ value: String) -> Bool {
+        value.hasPrefix("RMC1|") || value.hasPrefix("RMR1|") || value.hasPrefix("RMQ1|")
+    }
+    static func canonicalText(_ value: String, limit: Int) throws -> String {
+        guard value == trimmed(value), !value.isEmpty, value.utf8.count <= limit,
+              !value.unicodeScalars.contains(where: { $0.value < 32 || $0.value == 127 }) else {
+            throw MeshError.invalid("Use one short line, up to \(limit) UTF-8 bytes, without extra outer spaces.")
+        }
+        return value
+    }
+    static func validID(_ value: String) -> Bool {
+        value.utf8.count == 8 && value.utf8.allSatisfy { (48...57).contains($0) || (97...102).contains($0) } && UInt32(value, radix: 16) != 0
+    }
+    static func question(from text: String) throws -> Question? {
+        guard text.hasPrefix("RMQ1|") else { return nil }
+        let parts = text.split(separator: "|", maxSplits: 2, omittingEmptySubsequences: false).map(String.init)
+        guard parts.count == 3, validID(parts[1]) else { throw MeshError.invalid("Invalid hub question identity.") }
+        return Question(id: parts[1], text: try canonicalText(parts[2], limit: questionLimit))
+    }
+    static func questionText(id: String, text: String) throws -> String {
+        guard validID(id) else { throw MeshError.invalid("Invalid hub question identity.") }
+        return "RMQ1|\(id)|\(try canonicalText(trimmed(text), limit: questionLimit))"
+    }
+    static func answerNote(reportSequence: UInt32, questionID: String, text: String) throws -> String {
+        guard reportSequence > 0, validID(questionID) else { throw MeshError.invalid("Invalid reply identity.") }
+        let answer = try canonicalText(trimmed(text), limit: answerLimit)
+        return "RMR1|\(String(format: "%08x", reportSequence))|\(questionID)|\(answer)"
+    }
+    static func answerText(from note: String) -> String? {
+        let parts = note.split(separator: "|", maxSplits: 3, omittingEmptySubsequences: false).map(String.init)
+        guard parts.count == 4, parts[0] == "RMR1", validID(parts[1]), validID(parts[2]),
+              (try? canonicalText(parts[3], limit: answerLimit)) != nil else { return nil }
+        return parts[3]
+    }
+    static func replyDraft(original: RequestDraft, reportSequence: UInt32, questionID: String, text: String) throws -> RequestDraft {
+        RequestDraft(category: original.category, severity: original.severity, people: original.people,
+                     note: try answerNote(reportSequence: reportSequence, questionID: questionID, text: text))
+    }
+}
+
 enum BLEFraming {
     static func chunks(frame: Data, transferID: UInt8) throws -> [Data] {
         guard (44...WireCodec.maxFrame).contains(frame.count) else { throw MeshError.invalid("Invalid radio frame size.") }

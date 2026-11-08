@@ -58,6 +58,7 @@ $required = $appSources + $testSources + $runtimeSources + @(
     'EmergencyMesh/TemocModel/README.md',
     'EmergencyMesh/TemocModel/manifest.json',
     'EmergencyMeshTests/golden-v1.json',
+    'EmergencyMeshTests/followup-v1.json',
     'EmergencyMesh.xcodeproj/project.pbxproj',
     'EmergencyMesh.xcodeproj/xcshareddata/xcschemes/EmergencyMesh.xcscheme',
     'TemocRuntime/Package.swift',
@@ -134,6 +135,9 @@ if ($scheme.OuterXml -notmatch 'BlueprintName="EmergencyMesh"' -or $scheme.Outer
 $fixtureHash = (Get-FileHash -LiteralPath (Join-Path $iosRoot 'EmergencyMeshTests/golden-v1.json') -Algorithm SHA256).Hash.ToLowerInvariant()
 $hubFixtureHash = (Get-FileHash -LiteralPath (Join-Path $meshRoot 'hub/fixtures/golden-v1.json') -Algorithm SHA256).Hash.ToLowerInvariant()
 if ($fixtureHash -ne $hubFixtureHash) { throw 'The iOS golden fixture differs from the public hub fixture.' }
+$followupFixtureHash = (Get-FileHash -LiteralPath (Join-Path $iosRoot 'EmergencyMeshTests/followup-v1.json') -Algorithm SHA256).Hash.ToLowerInvariant()
+$hubFollowupFixtureHash = (Get-FileHash -LiteralPath (Join-Path $meshRoot 'hub/fixtures/followup-v1.json') -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($followupFixtureHash -ne $hubFollowupFixtureHash) { throw 'The iOS follow-up fixture differs from the public hub fixture.' }
 
 # File hashes and ZIP read-back are streamed; no GGUF-sized byte array.
 $manifestFiles = @($entries | Sort-Object path | ForEach-Object {
