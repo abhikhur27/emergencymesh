@@ -26,7 +26,7 @@ Open `http://127.0.0.1:4781`. Sign in as **operator** with the stable credential
 
 For physical intake, use `npm run ports`, then `npm start -- --serial <actual-port> --ollama --model nemotron-3-nano:4b --minutes 120`. The USB cable must carry data. The application reports board readiness independently of radio delivery. Keep the phone app open during testing. [Hub setup and runtime configuration](hub/README.md).
 
-The fixed public campus profile is [regions/utd-ecsw.json](regions/utd-ecsw.json); first startup creates a separate stable private `region-profile.json`. The reception study uses saved hardware requests, repeat counts, actual RSSI/SNR and location provenance. Schematic landmark mentions are approximate. GPS is shown with recorded accuracy; the schematic does not invent positions, coverage polygons or relay routes.
+The fixed public campus profile is [regions/utd-ecsw.json](regions/utd-ecsw.json); first startup creates a separate stable private `region-profile.json`. The interactive campus map adapts 24 original official UTD building footprints and supports pan, zoom, reset, building search and report selection. The reception study uses saved hardware requests, repeat counts, actual RSSI/SNR and location provenance. Landmark mentions remain approximate. The PDF has no verified GPS transform, so phone coordinates remain in source details rather than being guessed onto the map. [Map sources and limits](docs/map-sources.md).
 
 ## Local agents, supervisor and storage
 
@@ -36,7 +36,7 @@ The separate [supervisor application](supervisor/README.md) manages one physical
 
 Authenticated local MongoDB Community storage mirrors operator password hashes, hashed sessions and device metadata. The supervisor also mirrors cases and coordination state. Durable local JSON spools keep intake and pending work available during database/network failure; decrypted incident files remain sensitive and are not encrypted at rest by this prototype. Keep their data directories private.
 
-Actual local Nemotron inference and authenticated local MongoDB read/write were verified for this implementation. The deployed supervisor currently uses the desktop's local GPU. **No Brev GPU instance has been provisioned; the signed-in workspace is blocked by Terms of Service acceptance and its credit balance is unverified. MongoDB Atlas is not configured or claimed.** Model and database status are shown from runtime evidence, not assumed by the interface.
+Actual local Nemotron inference and authenticated local MongoDB read/write were verified for this implementation. ECSW runs its own laptop model. The supervisor application runs on the desktop behind authenticated Cloudflare HTTPS; its requested Brev inference transition is recorded separately in the [dated runtime receipt](docs/runtime-setup.md). As of November 8 at 10:55 UTC, $60 of team credits were claimed, the failed Hyperstack machine was deleted, and the approved MassedCompute replacement was still building. Its desktop budget guard and deadline cleanup were active, but Brev model inference was not yet verified. The desktop model remains active until that verification passes. MongoDB Community is the accepted running database; Atlas is not configured or claimed.
 
 ## Firmware and enclosure
 

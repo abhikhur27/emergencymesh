@@ -4,13 +4,13 @@ The supervisor application stays on ABHIONEMILLION behind its existing authentic
 
 ## Authentication and approval boundary
 
-Official Brev CLI 0.6.337 is installed in the existing desktop Ubuntu WSL distribution. Its release archive was verified against the published SHA256 `99bf8383618903ab411a91605a43b2e2f5a333781860bd6743ba44bfc4920d4f`. The normal NVIDIA device flow did not finish; no refreshable user credentials were created. No API key was created by the runtime agent.
+Official Brev CLI 0.6.337 is installed in the existing desktop Ubuntu WSL distribution. Its release archive was verified against the published SHA256 `99bf8383618903ab411a91605a43b2e2f5a333781860bd6743ba44bfc4920d4f`. The normal NVIDIA device flow did not finish. The owner separately approved a short-lived organization API key; its actual creation and authenticated desktop installation supersede that device-flow blocker.
 
 The official CLI source describes a 24-hour NVIDIA device session-key lifetime. A single pasted ID JWT does not establish durable refresh through the longer demonstration. The desktop task preflight requires verified cleanup authority lasting beyond the deletion time.
 
 The minimum documented API-key access for deletion is **Read & Write in the RescueMesh organization**. Brev documents only Read and Read & Write, with the creator's existing resource permissions. There is no documented exact-instance or lifecycle-only key scope. The key cannot access another organization. Any approval must accurately describe organization-wide write access, rather than promising finer provider restrictions. The application guard independently permits only the exact approved instance ID/name.
 
-Proposed owner-reviewed form: `rescuemesh-cleanup-20261108`, RescueMesh only, Read & Write, expiration November 10 at the end of the selected day. The default 30-day expiration should be changed. Root owns the console action and explicit owner approval. The approved value would be transferred directly into desktop private storage and used by `login-brev-api-key-private.ps1`; it must never enter source or public receipts.
+The approved key is named `RescueMesh-Nemotron-deadline`, scoped only to RescueMesh with Read & Write access, and expires at the end of November 10. It was transferred directly to private desktop storage and authenticated with `login-brev-api-key-private.ps1`. Its value is excluded from source and receipts. Authentication metadata confirms the expected organization without printing the key.
 
 `brev login --api-key` saves the key and its server-resolved organization. The installed binary recognizes the flag. API-key commands reject `--org` overrides and cannot list organizations; the lifecycle guard checks saved `APIKeyOrgID` against the approved organization and then uses its fixed key context. `brev refresh` is documented to prepare managed-instance SSH configuration after key login.
 
@@ -18,7 +18,7 @@ The official docs describe issuer-side revocation through Console â†’ API Keys â
 
 ## Compute and budget
 
-The first approved Hyperstack A6000 request failed provisioning. Its exact ID is recorded only in the owner's cleanup plan. It is not a verified model provider. The approved replacement is a MassedCompute A6000 with 48 GB VRAM, 64 GB system memory and 256 GB storage at $0.68/hour total, under a $30 credit cap. Root owns provisioning and will provide the actual ID and creation timestamp. No payment method or auto recharge is authorized.
+The first approved Hyperstack A6000 request failed provisioning and was deleted, with authenticated absence verified. The approved replacement is a MassedCompute A6000 with 48 GB VRAM, 64 GB system memory and 256 GB storage at $0.68/hour total, under a $30 credit cap. It was created November 8 at 10:40:23 UTC; its exact ID remains in the private plan. At 10:55 UTC it was still building without usable SSH or verified model inference. No payment method or auto recharge was added.
 
 The guard computes deletion at the earlier of 2026-11-10T05:00:00Z or the affordable resource lifetime, including prior project spend and a cleanup reserve. Failed provisioning is not assumed free without a billing receipt; a conservative elapsed-rate estimate can be included. A dedicated desktop task supplies deadline deletion independently of the SSH link. No native instance-delete TTL was found in official documentation; the official CI example explicitly calls `brev delete` during cleanup.
 
@@ -30,6 +30,6 @@ The model installer verifies the pinned official Ollama 0.40.15 Linux archive, c
 
 Activation requires native `lookup_resources` and `propose_allocation` calls from the actual 30B model, a matching digest, GPU memory evidence, correct SSH identity and enabled cleanup tasks. The configured Brev provider overrides legacy local-model runner variables. If the Brev link fails later, the application labels deterministic policy fallback; it does not call a desktop or other LLM.
 
-Prepared code passed lifecycle unit tests and supervisor provider-contract tests. These are preparation receipts, not a claim that a Brev GPU, billable resource, cleanup task or model provider is currently active.
+Prepared code passed lifecycle unit tests and supervisor provider-contract tests. The actual desktop guard is enabled and reached its guarding state under the scheduled-task identity; the separate cleanup task is enabled with next run November 10 at 05:00 UTC. These task receipts do not establish that the cloud VM finished provisioning or that Brev model inference works. Activation remains gated on actual private SSH, native tools and GPU evidence.
 
 References: [API-key scopes, expiry and revocation](https://docs.nvidia.com/brev/latest/guides/api-keys), [CLI authentication](https://docs.nvidia.com/brev/cli/getting-started), [CI cleanup example](https://docs.nvidia.com/brev/latest/guides/ci-cd), [instance deletion](https://docs.nvidia.com/brev/cli/instance-management), [pinned NVIDIA auth implementation](https://raw.githubusercontent.com/brevdev/brev-cli/v0.6.337/pkg/auth/kas.go), [official 30B model](https://ollama.com/library/nemotron-3-nano:30b).
