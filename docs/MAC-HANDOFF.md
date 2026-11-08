@@ -1,11 +1,19 @@
 # RescueMesh Mac handoff
 
-Send **`dist/RescueMesh-Mac.zip`** to your teammate with a Mac. It contains the native iPhone application source, Xcode project and shared scheme, all nine Swift files, the public cross-language encryption fixture, current design reference, verification notes and Mac check scripts. It contains no private device profile, hub login token, runtime database or dependency directory. The app shown on the phone is named **RescueMesh**; the Xcode project and scheme retain the compatible name **EmergencyMesh**.
+Send **`dist/RescueMesh-Mac.zip`** to your teammate with a Mac. This is the full offline handoff: 13 app Swift files, two XCTest source files, the TemocRuntime Swift package and its sources, Xcode project/shared scheme, native logo assets, design concepts, public synthetic encryption fixture, licenses and verification notes. It also includes the **1,117,320,736-byte Qwen model** and the **74,944,281-byte official llama.cpp b5046 ZIP**, so model/runtime downloads are unnecessary. Expect an archive around **1.2 GB**. No private profile, login token, runtime database, build output or Windows-extracted framework is included. The installed app is **RescueMesh**; the Xcode project/scheme remain **EmergencyMesh**.
+
+The optional **`dist/RescueMesh-Mac-SourceOnly.zip`** and public Git source omit model weights and the framework archive. They require a first Swift Package Manager runtime download and an in-app model download/import before open-ended Temoc chat. They still include the saved offline guides.
 
 ## Open, build and run
 
-1. Extract the archive and open `RescueMesh-Mac/EmergencyMesh.xcodeproj` in full Xcode16 or newer with an iOS17+ SDK. No third-party Swift packages, CocoaPods or project generator is required.
-2. Select the **EmergencyMesh** scheme and an installed iPhone simulator, then Run. The app has Request, My requests and Setup navigation. Setup’s **Check encryption locally** is a radio-free check using synthetic data.
+1. Extract the archive. In Terminal, enter the extracted `RescueMesh-Mac` folder and run:
+
+   ```bash
+   bash scripts/prepare-mac.sh --open
+   ```
+
+   This verifies the pinned model and original official runtime archive, restores `TemocRuntime/Vendor/llama.xcframework` using macOS `ditto`, checks its framework symlinks and opens Xcode. Prepare **before** package resolution. The original archive is intentionally carried intact because Windows extraction can turn macOS symlinks into text files. Full Xcode 16+ with an iOS 17+ SDK is required; install Xcode and any needed SDK/simulator components in advance for an offline handoff. No CocoaPods, project generator or chat API key is required.
+2. Select the **EmergencyMesh** scheme and an installed iPhone simulator, then Run. The app has Report, My requests, Temoc and Setup navigation. Setup’s **Check encryption locally** uses synthetic data and does not use the radio.
 3. In Terminal, from the extracted `RescueMesh-Mac` folder, run:
 
    ```bash
@@ -18,13 +26,13 @@ Send **`dist/RescueMesh-Mac.zip`** to your teammate with a Mac. It contains the 
 5. Obtain the private per-phone provisioning JSON separately from the hub owner. Import it in Setup through Files or paste it into the secure profile field. The public golden fixture key in the archive is for tests only. Each newly enrolled phone needs an independent random key and nonzero origin. No real key is compiled into this app or the relay firmware.
 6. Power the companion board, connect through the app’s Bluetooth flow, then send a short request. USB supplies board power; BLE carries phone data. **Waiting for the hub** means the BLE transfer finished. **Received by the hub** requires an authenticated hub receipt. Neither means emergency services were dispatched.
 
-The detailed application README includes profile shape, BLE states, location freshness, bounded retries, protected local storage, revocation limitations and the14 authored XCTest methods.
+The application README covers profile shape, BLE states, location freshness, bounded retries, protected storage, revocation limits, 14 protocol XCTest methods and four Temoc methods. Temoc uses Qwen2.5 1.5B Q4_K_M locally through llama.cpp, with separate encrypted chat histories, recent-context limits and saved safety guides. It has no radio tools and cannot send a request or contact help. Model correctness, medical suitability and iPhone inference performance are not established by packaging or a simulator build.
 
 ## What is verified
 
-The Windows packaging script checks all required filenames, nine Swift project references, plist XML and RescueMesh display name, shared app/test scheme, fixture equality with the hub, and every decompressed ZIP payload’s SHA-256. `MANIFEST.json` inside the archive records each file’s relative path, byte length and hash. This establishes package integrity and completeness for the checked source snapshot.
+The Windows packaging script checks the reviewed 13 app, two test and two runtime Swift sources; app/test project references; local Swift package reference; native assets; plist display name; shared scheme; public fixture equality; and all decompressed ZIP payload hashes. Full mode requires the exact model/archive lengths and SHA-256 values and checks that the original runtime ZIP carries the macOS framework symlink metadata. `MANIFEST.json` records the package mode, dependency pins and every payload’s relative path, length and SHA-256. The manifest itself is read back before each payload is streamed through SHA-256. The previous deliverable is replaced atomically only after those checks pass.
 
-**Native Xcode compilation, XCTest execution, simulator rendering and physical BLE/LoRa/phone power have not been verified by packaging on Windows.** Run the Mac checks above, inspect small-screen and large-text layouts, and test a real companion and hub before claiming those results. The current `verification.json` separates source checks from unexecuted native checks.
+**Windows packaging does not execute Xcode, XCTest, simulator rendering, model inference or physical BLE/LoRa/phone-power checks.** Read the dated `verification.json` and `TemocRuntime/verification.json` receipts for the latest recorded native checks. Run the Mac checks above, inspect small-screen and large-text layouts, test local generation disconnected from the internet, and exercise a real companion and hub before claiming those results.
 
 ## Rebuild the handoff on Windows
 
@@ -32,6 +40,8 @@ From the repository root:
 
 ```powershell
 pwsh -NoProfile -File emergency-mesh/scripts/package-mac.ps1
+# Optional small handoff; no weights or runtime archive:
+pwsh -NoProfile -File emergency-mesh/scripts/package-mac.ps1 -SourceOnly
 ```
 
-The script prints the absolute ZIP path, SHA-256, byte size and file count after reading back and verifying the archive. It copies only explicitly listed public iOS source and documentation. If the iOS owner intentionally adds a Swift file, update both the Xcode project and packaging allowlist before rebuilding. Native asset catalogs are included when present.
+The script prints the absolute ZIP path, mode, SHA-256, byte size and file count after verifying the archive. Full mode requires the already downloaded pinned files at `ios/EmergencyMesh/TemocModel/qwen2.5-1.5b-instruct-q4_k_m.gguf` and `ios/TemocRuntime/llama-b5046-xcframework.zip`. It streams files without loading the model into memory and embeds model/archive bytes without recompression. It copies only allowlisted source/documentation plus JSON/PNG/PDF files under the reviewed native asset catalog. New Swift files require an allowlist/project review. Public source publishing must continue to exclude model weights and `TemocRuntime/Vendor`.

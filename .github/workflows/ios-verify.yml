@@ -16,13 +16,15 @@ jobs:
         run: |
           set -euo pipefail
           xcodebuild -version
+          curl --fail --location --retry 3 --output ios/TemocRuntime/llama-b5046-xcframework.zip 'https://github.com/ggml-org/llama.cpp/releases/download/b5046/llama-b5046-xcframework.zip'
+          bash ios/scripts/prepare-mac.sh
           node ios/scripts/create-project.mjs
           cd ios
           plutil -lint EmergencyMesh/Info.plist EmergencyMesh.xcodeproj/project.pbxproj
           mkdir -p .build
           xcrun simctl list devices available -j > .build/devices.json
           simulator_id=$(python3 -c 'import json; d=json.load(open(".build/devices.json")); print(next(x["udid"] for a in d["devices"].values() for x in a if x.get("isAvailable") and x["name"].startswith("iPhone")))')
-          xcodebuild test -project EmergencyMesh.xcodeproj -scheme EmergencyMesh -destination "platform=iOS Simulator,id=$simulator_id" -derivedDataPath .build/DerivedData -resultBundlePath .build/native-tests.xcresult CODE_SIGNING_ALLOWED=NO 2>&1 | tee .build/xcode-test.log
+          xcodebuild test -project EmergencyMesh.xcodeproj -scheme EmergencyMesh -destination "platform=iOS Simulator,arch=arm64,id=$simulator_id" -derivedDataPath .build/DerivedData -resultBundlePath .build/native-tests.xcresult CODE_SIGNING_ALLOWED=NO 2>&1 | tee .build/xcode-test.log
       - name: Verify real Qwen weights through the native runtime
         shell: bash
         run: |
