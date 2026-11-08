@@ -40,12 +40,12 @@ export async function createSupervisorServer({core,operatorToken,username='opera
       if(request.method==='GET'&&staticFiles.has(url.pathname)){const[file,type]=staticFiles.get(url.pathname);response.writeHead(200,{'Content-Type':type});return response.end(await readFile(publicRoot+file));}
       if(url.pathname.startsWith('/api/hub/')){
         const hubId=machineHub(request);if(!hubId)return send(response,401,{error:'Hub authentication required'});
-        if(request.method==='POST'&&url.pathname==='/api/hub/cases'){const accepted=await core.receive(await body(request),{allowedHubId:hubId});return send(response,202,accepted);}
+        if(request.method==='POST'&&url.pathname==='/api/hub/cases'){const accepted=await core.receive(await body(request),{allowedHubId:hubId});return send(response,202,{...accepted,agent:core.planner.status()});}
         if(request.method==='GET'&&url.pathname==='/api/hub/updates'){
           if(url.searchParams.get('hubId')&&url.searchParams.get('hubId')!==hubId)return send(response,403,{error:'Hub scope rejected'});
           const afterText=url.searchParams.get('after')||'0';if(!/^\d{1,16}$/.test(afterText))return send(response,400,{error:'Invalid update cursor'});
           const after=Number(afterText);if(!Number.isSafeInteger(after))return send(response,400,{error:'Invalid update cursor'});
-          await core.contact(hubId);return send(response,200,core.updates(hubId,after));
+          await core.contact(hubId);return send(response,200,{...core.updates(hubId,after),agent:core.planner.status()});
         }
         return send(response,404,{error:'Not found'});
       }

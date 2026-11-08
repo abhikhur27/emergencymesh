@@ -12,6 +12,7 @@ enum WireCodec {
         let fix = location.flatMap { $0.isUsable(at: createdAt) ? $0 : nil }
         var flags: UInt8 = fix == nil ? 0 : 1
         if draft.breathingConcern { flags |= 2 }; if draft.trapped { flags |= 4 }; if draft.severeBleeding { flags |= 8 }
+        for supply in draft.supplies { flags |= supply.rawValue }
         var data = Data([draft.category.rawValue, draft.severity.rawValue, UInt8(draft.people), flags])
         data.appendLE(UInt32(seconds))
         data.appendLE(Int32(((fix?.latitude ?? 0) * 100_000).rounded()))

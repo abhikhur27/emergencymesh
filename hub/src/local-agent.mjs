@@ -1,5 +1,6 @@
 import { deterministicSummary } from './summary.mjs';
 import { sourceResource } from './region.mjs';
+import { reportedSupplies, sourceNeedRequests, signalFacts, needsLocalInterpretation } from './signal-fields.mjs';
 
 export async function boundedJson(response, maximum = 65536) {
   if (!response.ok) throw new Error('Remote operation unavailable');
@@ -22,16 +23,20 @@ function callArguments(result, name) {
   return args;
 }
 export async function runLocalAgent(request, { caseId, region, enabled = true, model = 'nemotron-3-nano:4b', fetchImpl = fetch, timeoutMs = 30000, signal, onTool = async () => {} } = {}) {
-  const resource = sourceResource(request); const quantity = Math.max(1, Math.min(20, request.people));
-  const base = { text: deterministicSummary(request), headline: `${request.people} ${request.people === 1 ? 'person' : 'people'} · ${resource} requested`, resource, quantity, needType: resource };
+  const needRequests=sourceNeedRequests(request);const resource = sourceResource(request); const quantity = needRequests[0]?.quantity;
+  const base = { text: deterministicSummary(request), headline: `${request.people} ${request.people === 1 ? 'person' : 'people'} · ${resource} requested`, resource, quantity, needType: resource, needRequests, reportedSupplies:reportedSupplies(request), signalFacts:signalFacts(request) };
   const source = { category: request.category, severity: request.severity, people: request.people, note: request.note, hasGps: Boolean(request.flags & 1) };
   await onTool({ action: 'validate_fields', actor: 'ECSW agent', result: 'Original category, sender priority and people count validated. Source remains immutable.' });
   let lookedUp = false;
   const lookup = async () => {
     lookedUp = true;
-    const result = { resource, requestedQuantity: quantity, catalog: region?.resources || [], localAvailability: 'not-verified', nextAction: 'share_case' };
+    const result = { resource, requestedQuantity: quantity, needRequests, catalog: region?.resources || [], localAvailability: 'not-verified', nextAction: 'share_case' };
     await onTool({ action: 'lookup_resources', actor: 'ECSW agent', result: `Region catalog consulted for ${resource}; actual local stock is not asserted.` }); return result;
   };
+  if(!needsLocalInterpretation(request,region)){
+    await onTool({action:'signal_fields',actor:'ECSW agent',result:'Reported type, priority, people and selected supplies read directly from authenticated signal fields. Original note retained verbatim; no model summary needed.'});
+    await lookup();return {...base,source:'signal',model:null,needsReview:false,method:'authenticated-signal-fields'};
+  }
   if (!enabled) { await lookup(); return { ...base, source: 'local-rules', model: null, needsReview: false, method: 'validated-source-and-resource-policy' }; }
   if (typeof model !== 'string' || !/^[A-Za-z0-9_.:/-]{1,100}$/.test(model) || /cloud/i.test(model)) throw new Error('A local model is required');
   const messages = [

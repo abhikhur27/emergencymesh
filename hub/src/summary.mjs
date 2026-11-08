@@ -1,9 +1,10 @@
-const categories = { 1: 'Medical', 2: 'Fire', 3: 'Rescue', 4: 'Safety', 5: 'Supplies' };
+import { CATEGORY_LABELS as categories, reportedSupplies } from './signal-fields.mjs';
 const priorities = { 1: 'Urgent', 2: 'Serious', 3: 'Assistance' };
 
 export function deterministicSummary(request) {
   const concerns = [request.flags & 2 ? 'breathing concern reported' : '', request.flags & 4 ? 'trapped reported' : '', request.flags & 8 ? 'severe bleeding reported' : ''].filter(Boolean);
-  return `${categories[request.category]} request; user reports ${priorities[request.severity].toLowerCase()} priority and ${request.people} ${request.people === 1 ? 'person' : 'people'}. ${request.flags & 1 ? `Location ${request.latitude.toFixed(5)}, ${request.longitude.toFixed(5)}; accuracy ${request.accuracy === 65535 ? 'unknown' : `${request.accuracy} m`}.` : 'Location unknown.'}${concerns.length ? ` ${concerns.join('; ')}.` : ''}${request.note ? ` Report: ${request.note}` : ''}`;
+  const supplies=reportedSupplies(request);
+  return `${categories[request.category]} request; user reports ${priorities[request.severity].toLowerCase()} priority and ${request.people} ${request.people === 1 ? 'person' : 'people'}. ${request.flags & 1 ? `Location ${request.latitude.toFixed(5)}, ${request.longitude.toFixed(5)}; accuracy ${request.accuracy === 65535 ? 'unknown' : `${request.accuracy} m`}.` : 'Location unknown.'}${concerns.length ? ` ${concerns.join('; ')}.` : ''}${supplies.length?` Supplies selected: ${supplies.join(', ')}.`:''}${request.note ? ` Report: ${request.note}` : ''}`;
 }
 
 // Local-model output is an advisory transcription aid; original fields and user priority remain authoritative.

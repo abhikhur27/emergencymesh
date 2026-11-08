@@ -65,10 +65,10 @@ export function encodeRequest(request, envelope, key, nonce) {
   if (!request || typeof request !== 'object') fail('Invalid request', 'VALIDATION_ERROR');
   const note = textBytes(request.note, 120, 'note');
   const payload = Buffer.alloc(20 + note.length);
-  payload[0] = integer(request.category, 1, 5, 'category');
+  payload[0] = integer(request.category, 1, 8, 'category');
   payload[1] = integer(request.severity, 1, 3, 'severity');
   payload[2] = integer(request.people, 1, 255, 'people');
-  payload[3] = integer(request.flags, 0, 15, 'flags');
+  payload[3] = integer(request.flags, 0, 255, 'flags');
   payload.writeUInt32LE(integer(request.createdAt, 0, 0xffffffff, 'created timestamp'), 4);
   const known = (request.flags & 1) !== 0;
   if (known) {
@@ -130,10 +130,10 @@ function parseRequest(payload) {
     battery: payload[18], note: readText(payload.subarray(20)),
   };
   // Reuse canonical domain validation, without generating ciphertext or a fresh nonce.
-  integer(request.category, 1, 5, 'category');
+  integer(request.category, 1, 8, 'category');
   integer(request.severity, 1, 3, 'severity');
   integer(request.people, 1, 255, 'people');
-  integer(request.flags, 0, 15, 'flags');
+  integer(request.flags, 0, 255, 'flags');
   if (payload[19] > 120) fail('Invalid note length');
   if (request.battery > 100 && request.battery !== 255) fail('Invalid battery');
   if (request.flags & 1) {

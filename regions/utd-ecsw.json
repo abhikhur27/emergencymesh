@@ -338,7 +338,10 @@
     "medical",
     "fire",
     "rescue",
-    "safety"
+    "safety",
+    "food",
+    "medicine",
+    "power"
   ],
   "resourceNotice": "Resource quantities and service dispatch in the regional demonstration are simulated. No real agency availability is asserted.",
   "landmarkCatalogVersion": 2,

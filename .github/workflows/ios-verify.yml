@@ -1,0 +1,44 @@
+name: iOS native verification
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  xcode-and-local-inference:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - name: Verify portable project and native simulator tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -version
+          node ios/scripts/create-project.mjs
+          cd ios
+          plutil -lint EmergencyMesh/Info.plist EmergencyMesh.xcodeproj/project.pbxproj
+          mkdir -p .build
+          xcrun simctl list devices available -j > .build/devices.json
+          simulator_id=$(python3 -c 'import json; d=json.load(open(".build/devices.json")); print(next(x["udid"] for a in d["devices"].values() for x in a if x.get("isAvailable") and x["name"].startswith("iPhone")))')
+          xcodebuild test -project EmergencyMesh.xcodeproj -scheme EmergencyMesh -destination "platform=iOS Simulator,id=$simulator_id" -derivedDataPath .build/DerivedData -resultBundlePath .build/native-tests.xcresult CODE_SIGNING_ALLOWED=NO 2>&1 | tee .build/xcode-test.log
+      - name: Verify real Qwen weights through the native runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          model_file="$RUNNER_TEMP/rescuemesh-temoc-qwen.gguf"
+          trap 'rm -f "$model_file"' EXIT
+          curl --fail --location --retry 3 --connect-timeout 20 --max-time 900 --output "$model_file" 'https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/91cad51170dc346986eccefdc2dd33a9da36ead9/qwen2.5-1.5b-instruct-q4_k_m.gguf'
+          printf '%s  %s\n' '6a1a2eb6d15622bf3c96857206351ba97e1af16c30d7a74ee38970e434e9407e' "$model_file" | shasum -a 256 -c -
+          swift run --package-path ios/TemocRuntime -c release TemocSmokeCheck "$model_file" 2>&1 | tee ios/.build/temoc-native-smoke.log
+      - name: Retain bounded native verification receipts
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f
+        with:
+          name: rescuemesh-native-verification
+          retention-days: 7
+          path: |
+            ios/.build/xcode-test.log
+            ios/.build/native-tests.xcresult
+            ios/.build/temoc-native-smoke.log

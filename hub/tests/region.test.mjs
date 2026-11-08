@@ -61,3 +61,14 @@ test('missing, foreign-region, future-version and malformed source profiles fail
   for (const legacy of [{ ...oldProfile(), region: 2 }, { ...oldProfile(), landmarkCatalogVersion: 99 }]) { await writeFile(file, JSON.stringify(legacy)); const before = await readFile(file, 'utf8'); await assert.rejects(upgradeRegionCatalog(directory, { apply: true }), /refused|downgrade/); assert.equal(await readFile(file, 'utf8'), before); }
   const legacy = oldProfile(); await writeFile(file, JSON.stringify(legacy)); const sourceFile = join(directory, 'malformed-source.json'); await writeFile(sourceFile, '{"schema":"wrong"}'); const before = await readFile(file, 'utf8'); await assert.rejects(upgradeRegionCatalog(directory, { apply: true, catalogFile: sourceFile }), /source/); assert.equal(await readFile(file, 'utf8'), before);
 });
+
+test('new supply resource IDs require explicit migration and preserve every other saved profile field',async t=>{
+  const directory=await fixture(t),file=join(directory,'region-profile.json');await writeFile(file,JSON.stringify(oldProfile()));
+  await upgradeRegionCatalog(directory,{apply:true});const current=JSON.parse(await readFile(file,'utf8'));
+  current.resources=['water','supplies','medical','fire','rescue','safety'];await writeFile(file,JSON.stringify(current));const before=await readFile(file,'utf8');
+  assert.equal((await loadRegionProfile(directory)).resources.length,6);assert.equal(await readFile(file,'utf8'),before);
+  const dry=await upgradeRegionCatalog(directory);assert.equal(dry.changed,true);assert.equal(await readFile(file,'utf8'),before);
+  await upgradeRegionCatalog(directory,{apply:true});const migrated=JSON.parse(await readFile(file,'utf8'));
+  assert.deepEqual(migrated.resources,[...current.resources,'food','medicine','power']);
+  const {resources:oldResources,...oldFields}=current,{resources:newResources,...newFields}=migrated;assert.deepEqual(newFields,oldFields);
+});

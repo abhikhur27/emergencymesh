@@ -27,7 +27,7 @@ test('durable radio ACK and queued case precede a slow model; automatic sharing 
   const result = await f.core.ingest(f.frame); assert.equal(f.sent.length, 1); assert.equal(posted.length, 0);
   const saved = JSON.parse(await readFile(join(f.directory, 'incidents.json'), 'utf8')); assert.equal(saved.incidents[0].coordination.revision, 1); assert.ok(saved.incidents[0].receipt);
   for (let i = 0; i < 10 && !entered; i++) await new Promise(resolve => setTimeout(resolve, 5)); assert.equal(entered, true);
-  release(); await f.pipeline.idle(); assert.equal(posted.length, 1); assert.deepEqual(posted[0].request, { category: 5, severity: 2, people: 3, note: f.request.note });
+  release(); await f.pipeline.idle(); assert.equal(posted.length, 1); assert.deepEqual(posted[0].request, { category: 5, severity: 2, people: 3, flags:0, supplies:[], note: f.request.note });
   assert.equal(posted[0].source.kind, 'radio'); assert.equal(posted[0].summary.resource, 'water'); assert.equal(posted[0].location.kind, 'landmark'); assert.equal(posted[0].location.landmarkId, 'hh');
   assert.equal(f.core.store.get(result.id).status, 'hub-received'); assert.equal(f.core.store.get(result.id).reviewedAt, null);
   assert.equal(f.core.store.get(result.id).coordination.sharedRevision, 1); assert.equal(f.sent.length, 1);
@@ -72,4 +72,36 @@ test('native local agent permits only validated tools and source fields; wrong m
   assert.equal(result.source, 'local-model'); assert.equal(result.resource, 'water'); assert.equal(result.quantity, 2); assert.equal(calls.length, 1); assert.equal(calls[0].think, false); assert.equal(calls[0].tools[0].function.parameters.additionalProperties, false); assert.ok(tools.some(t => t.action === 'prepare_case')); assert.equal(request.severity, 1);
   const fallback = await runLocalAgent(request, { caseId: 'ecsw:1:2:3', region: DEFAULT_REGION, fetchImpl: async () => json({ message: { tool_calls: [{ function: { name: 'lookup_resources', arguments: { resource: 'medical', people: 99 } } }] } }) });
   assert.equal(fallback.source, 'local-rules-fallback'); assert.equal(fallback.resource, 'water'); assert.equal(fallback.quantity, 2); assert.equal(fallback.model, null); assert.match(fallback.error, /invalid tool/);
+});
+
+test('typed supplies reach the regional agent directly, with durable acknowledgements and validated partial allocations',async t=>{
+  let body,updates=[];const agent={model:'nemotron-3-nano:30b',hosting:'brev',mode:'nemotron-tools',lastSuccessAt:1794000000,secret:'must-not-be-exposed'};
+  const f=await fixture(t,{enabled:true,runtime:{hubId:'ecsw',supervisorUrl:'https://supervisor.test',supervisorToken:'private'},fetchImpl:async(url,options)=>{
+    if(!options?.body)return json({updates,cursor:updates.at(-1)?.seq||0,agent});
+    assert.match(url,/\/api\/hub\/cases$/);body=JSON.parse(options.body);return json({accepted:true,eventId:body.eventId,caseId:body.caseId,revision:body.revision,agent},202);
+  }});
+  const request={...f.request,category:5,flags:16|32,note:'ECSW'};
+  const frame=encodeRequest(request,{region:1,keyId:1,origin:123,sequence:2,hops:3},f.config.key);
+  const {id}=await f.core.ingest(frame);await f.pipeline.idle();
+  assert.deepEqual(body.request.supplies,['food','water']);assert.equal(body.request.flags,48);assert.equal(body.summary.needRequests.length,2);
+  assert.deepEqual(body.sourceAgent,{hosting:'local',source:'signal',model:null,configuredModel:'nemotron-3-nano:4b'});
+  const c=f.store.get(id).coordination;assert.equal(c.summary.source,'signal');assert.equal(c.acknowledgedAt,c.sentAt);assert.equal(c.summary.model,null);
+  assert.deepEqual(f.pipeline.status().supervisor.agent,{model:agent.model,hosting:'brev',mode:'nemotron-tools',lastSuccessAt:agent.lastSuccessAt});
+  assert.equal(f.pipeline.status().supervisor.sent,1);assert.equal(f.pipeline.status().supervisor.currentAcknowledged,1);
+  const allocation={caseId:c.caseId,simulation:true,townId:'plano',service:'Food kits',resource:'food',quantity:3,dispatchId:'exercise-food',agent:{source:'nemotron-tools',model:agent.model,at:1}};
+  updates=[{seq:1,hubId:'ecsw',caseId:c.caseId,revision:1,status:'partial',allocations:[allocation],unmetNeeds:[{resource:'water',quantity:3,reason:'No available supplier'}]}];
+  await f.pipeline.pollUpdates();
+  assert.equal(c.stage,'partial');assert.equal(c.allocations.length,1);assert.equal(c.allocation.resource,'food');assert.equal(c.allocation.quantityBasis,'policy-per-person');assert.equal(c.unmetNeeds[0].resource,'water');assert.ok(Number.isFinite(c.lastUpdateAt));assert.equal(f.pipeline.status().supervisor.returned,1);
+  updates=[{seq:2,hubId:'ecsw',caseId:c.caseId,revision:1,status:'allocated',allocations:[allocation,{...allocation,resource:'water',quantity:99}]}];
+  await f.pipeline.pollUpdates();assert.equal(f.store.state.automation.cursor,1);assert.equal(f.store.get(id).coordination.stage,'partial');
+  assert.equal(f.store.get(id).status,'hub-received');assert.equal(f.sent.length,1);
+});
+
+test('prepared legacy outbox envelopes remain byte-equivalent in shape after the typed-field upgrade',async t=>{
+  const f=await fixture(t);const {id}=await f.core.ingest(f.frame);await f.pipeline.idle();
+  const c=f.store.get(id).coordination;delete c.summary.needRequests;
+  const body=f.pipeline.envelope(f.store.get(id));
+  assert.deepEqual(body.request,{category:5,severity:2,people:3,note:f.request.note});
+  assert.deepEqual(Object.keys(body.summary),['text','needType','resource','quantity']);
+  assert.equal(body.sourceAgent,undefined);
 });

@@ -13,14 +13,15 @@ if (-not (Test-Path -LiteralPath (Join-Path $destinationRoot '.git') -PathType C
 $remote = (& git -C $destinationRoot config --get remote.origin.url).Trim()
 if ($LASTEXITCODE -ne 0 -or $remote -notmatch '^(https://github\.com/abhikhur27/emergencymesh(?:\.git)?|git@github\.com:abhikhur27/emergencymesh\.git)$') { throw 'Destination is not the expected RescueMesh public repository.' }
 
-$extensions = @('.md','.js','.mjs','.cjs','.json','.html','.css','.svg','.swift','.pbxproj','.xcscheme','.plist','.xcworkspacedata','.xcsettings','.h','.cpp','.ini','.ps1','.sh','.png','.jpg','.jpeg','.fcstd','.stl','.step','.stp','.3mf','.txt','.yml','.yaml')
-$blockedSegments = @('node_modules','.emergency','.supervisor','.private','.pio','.native','.build','.git','.venv','DerivedData','xcuserdata','dist','runtime','logs','private','receipts','releases','artifacts')
+$extensions = @('.md','.js','.mjs','.cjs','.json','.html','.css','.svg','.swift','.pbxproj','.xcscheme','.plist','.xcworkspacedata','.xcsettings','.h','.cpp','.ini','.ps1','.sh','.png','.jpg','.jpeg','.pdf','.fcstd','.stl','.step','.stp','.3mf','.txt','.yml','.yaml')
+$blockedSegments = @('node_modules','.emergency','.supervisor','.private','.pio','.native','.build','.git','.venv','DerivedData','xcuserdata','Vendor','TemocModel','dist','runtime','logs','private','receipts','releases','artifacts')
 $fixedFiles = @('README.md','firmware/README.md','firmware/platformio.ini','firmware/verification.json','hub/README.md','hub/DESIGN.md','hub/package.json','hub/package-lock.json','supervisor/README.md','supervisor/package.json','supervisor/package-lock.json','supervisor/.env.example')
-$publicDocs = @('ARCHITECTURE.md','PROTOCOL.md','DEMO.md','VERIFICATION.md','device-security.md','MAC-HANDOFF.md','cad-install.md','runtime-setup.md','OPERATING-20261108.md','map-sources.md','brev-verification-20261108.json')
+$publicDocs = @('ARCHITECTURE.md','PROTOCOL.md','DEMO.md','VERIFICATION.md','device-security.md','MAC-HANDOFF.md','cad-install.md','runtime-setup.md','OPERATING-20261108.md','map-sources.md','brev-verification-20261108.json','TEMOC.md','TECHSTACK.md')
 $publicBrevSupport = @('check-brev-auth.sh','install-brev-cli.sh','install-brev-model.sh','run-brev-model.sh','brev-provider-plan.md')
 $publicHardware = @('README.md','cad-recipe.json','enclosure-preview.png','RescueMesh-enclosure.FCStd','RescueMesh-enclosure.step','BasePrint.stl','LidPrint.stl','AdapterPrint.stl')
 $currentDesign = @('RESCUEMESH.md','FULL-STORYBOARD.md','REFERENCES.md','CURRENT.json','design.tokens.json','rescuemesh-phone.png','rescuemesh-ecsw.png','rescuemesh-supervisor.png','rescuemesh-login.png','rescuemesh-oled.png')
 function Test-PublicPath([string]$Relative) {
+    if ($Relative -in @('ios/EmergencyMesh/TemocModel/README.md','ios/EmergencyMesh/TemocModel/manifest.json','.github/workflows/ios-verify.yml')) { return $true }
     $segments = $Relative.Split('/')
     foreach ($segment in $segments) { if ($blockedSegments -contains $segment -or $segment.StartsWith('.emergency') -or $segment.StartsWith('.supervisor')) { return $false } }
     $leaf = $segments[-1]
@@ -122,6 +123,9 @@ if (-not $Preview) {
 !**/.env.example
 '@
         [IO.File]::WriteAllText($ignoreFile, $ignoreText.TrimEnd() + "`n" + $ignoreBoundary + "`n", [Text.UTF8Encoding]::new($false))
+    }
+    if (-not ([IO.File]::ReadAllText($ignoreFile)).Contains('# Temoc local model/runtime binaries')) {
+        [IO.File]::AppendAllText($ignoreFile, "`n# Temoc local model/runtime binaries`n**/*.gguf`n**/*.gguf.part`nios/TemocRuntime/Vendor/`nios/TemocRuntime/*.zip`n", [Text.UTF8Encoding]::new($false))
     }
     # Existing files are preserved. Never mirror-delete another author's source.
     $publicFiles = @(Get-ChildItem -LiteralPath $destinationRoot -Recurse -File -Force | Where-Object { -not $_.FullName.StartsWith((Join-Path $destinationRoot '.git') + [IO.Path]::DirectorySeparatorChar, [StringComparison]::OrdinalIgnoreCase) })

@@ -1,4 +1,5 @@
-const resourceSchema={type:'string',enum:['water','supplies','medical','fire','rescue','safety']};
+import {RESOURCES,sourceNeedRequests} from './schema.mjs';
+const resourceSchema={type:'string',enum:RESOURCES};
 const SUPPLIER_TOWNS=['plano','garland','addison'];
 const toolsFor=townIds=>[{type:'function',function:{name:'lookup_resources',description:'Read the available simulated resource inventory. Call this before proposing an allocation.',parameters:{type:'object',required:['resource'],additionalProperties:false,properties:{resource:resourceSchema}}}},{type:'function',function:{name:'propose_allocation',description:'Propose one eligible supplying town from lookup_resources, different from sourceHub, with the exact required resource quantity.',parameters:{type:'object',required:['resource','townId','quantity'],additionalProperties:false,properties:{resource:resourceSchema,townId:{type:'string',enum:townIds},quantity:{type:'integer',minimum:1,maximum:20}}}}}];
 export class NemotronPlanner {
@@ -7,6 +8,7 @@ export class NemotronPlanner {
     this.enabled=enabled;this.model=model;this.baseUrl=parsed.origin;this.timeoutMs=timeoutMs;this.fetch=fetchImpl;
     if(provider==='brev'&&(model!=='nemotron-3-nano:30b'||parsed.origin!=='http://127.0.0.1:11435'))throw new Error('Invalid private Brev provider configuration');
     this.health={enabled,model,hosting:provider==='brev'?'brev':['127.0.0.1','localhost','[::1]'].includes(parsed.hostname)?'local':'remote-configured',transport:provider==='brev'?'private-ssh-forward':'configured-http',providerVerifiedAt:verifiedAt,mode:enabled?'awaiting-inference':'rules',lastSuccessAt:null,lastError:null,lastLatencyMs:null,successfulToolCalls:0};
+    this.exerciseHealth={mode:'seeded-policy',lastSuccessAt:null,lastError:null,lastLatencyMs:null,generatedScenarios:0};
   }
   async plan(item,need,catalog,onTool=async()=>{}){
     const suppliers=catalog.filter(t=>SUPPLIER_TOWNS.includes(t.townId)&&t.townId!==item.hubId&&Number.isFinite(t.available)&&t.available>=0);
@@ -48,5 +50,22 @@ export class NemotronPlanner {
     const town=catalog.find(t=>t.available>=need.quantity);
     return town?{townId:town.townId,resource:need.resource,quantity:need.quantity,source:'rules-fallback',reason}:null;
   }
-  status(){return {...this.health};}
+  async describeExercise(item){
+    const fallback=()=>({note:item.request.note,generation:{source:'seeded-policy',model:null,at:Date.now()}});
+    // Real radio content never enters this fictional-scenario generator.
+    if(item.source?.kind!=='simulated'||!SUPPLIER_TOWNS.includes(item.hubId)||!this.enabled||this.health.hosting!=='brev')return fallback();
+    const started=Date.now(),controller=new AbortController(),timer=setTimeout(()=>controller.abort(),Math.min(this.timeoutMs,10000));
+    try{
+      const response=await this.fetch(this.baseUrl+'/api/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:this.model,messages:[{role:'system',content:'Write one brief fictional emergency-exercise intake note for the supplied town and selected need. Return only JSON {"note":"..."}, at most 120 UTF-8 bytes. This is generated exercise content. Do not change the supplied town, category, people, priority or resource, invent a real address, contact anyone, or give medical advice. For water needs mention drinking water; for supply kits do not mention water.'},{role:'user',content:JSON.stringify({town:item.hubId,category:item.request.category,people:item.request.people,priority:item.request.severity,resource:item.summary.resource,location:'exercise check-in'})}],format:{type:'object',required:['note'],additionalProperties:false,properties:{note:{type:'string',maxLength:120}}},stream:false,think:false,options:{temperature:.4,num_ctx:1024,num_predict:160},keep_alive:'5m'}),signal:controller.signal});
+      if(!response.ok)throw new Error('exercise-http');const value=await response.json();
+      if(typeof value.message?.content!=='string'||value.message.content.length>1000)throw new Error('exercise-output');
+      const parsed=JSON.parse(value.message.content);if(!parsed||Array.isArray(parsed)||Object.keys(parsed).length!==1||typeof parsed.note!=='string'||!parsed.note.trim()||Buffer.byteLength(parsed.note,'utf8')>120||/[\u0000-\u001f\u007f]/.test(parsed.note))throw new Error('exercise-note');
+      const before=sourceNeedRequests(item.request).map(n=>n.resource),after=sourceNeedRequests({...item.request,note:parsed.note}).map(n=>n.resource);
+      if(JSON.stringify(before)!==JSON.stringify(after))throw new Error('exercise-resource-changed');
+      this.exerciseHealth={mode:'nemotron',lastSuccessAt:Date.now(),lastError:null,lastLatencyMs:Date.now()-started,generatedScenarios:this.exerciseHealth.generatedScenarios+1};
+      return {note:parsed.note,generation:{source:'nemotron',model:this.model,at:Date.now()}};
+    }catch{this.exerciseHealth={...this.exerciseHealth,mode:'seeded-policy',lastError:'Generated exercise note unavailable or invalid; seeded scenario retained',lastLatencyMs:Date.now()-started};return fallback();}
+    finally{clearTimeout(timer);}
+  }
+  status(){return {...this.health,exerciseGeneration:{...this.exerciseHealth}};}
 }

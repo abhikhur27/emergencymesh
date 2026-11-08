@@ -79,7 +79,7 @@ test('note limits count UTF-8 bytes and reject broken Unicode instead of truncat
 
 test('valid encryption cannot hide invalid semantic field values', () => {
   const frame = encodeRequest(request, envelope, key, nonce);
-  for (const [index, value] of [[0, 0], [0, 6], [1, 4], [2, 0], [3, 16], [18, 101]]) {
+  for (const [index, value] of [[0, 0], [0, 9], [1, 4], [2, 0], [18, 101]]) {
     assert.throws(() => decodeFrame(mutatePlaintext(frame, raw => { raw[index] = value; }), profile));
   }
   assert.throws(() => decodeFrame(mutatePlaintext(frame, raw => { raw.writeInt32LE(9000001, 8); }), profile));
@@ -92,7 +92,7 @@ test('unknown-location sentinel and coordinate boundaries are exact', () => {
   assert.throws(() => encodeRequest({ ...unknown, accuracy: 0 }, envelope, key));
   assert.throws(() => encodeRequest({ ...unknown, latitude: 1 }, envelope, key));
   for (const invalid of [{ latitude: NaN }, { longitude: Infinity }, { latitude: 90.00001 }, { longitude: -180.00001 },
-    { battery: 101 }, { createdAt: -1 }, { flags: 16 }, { people: 0 }, { accuracy: -1 }]) {
+    { battery: 101 }, { createdAt: -1 }, { flags: 256 }, { people: 0 }, { accuracy: -1 }]) {
     assert.throws(() => encodeRequest({ ...request, ...invalid }, envelope, key));
   }
   const poles = { ...request, latitude: -90, longitude: 180, accuracy: 65535 };

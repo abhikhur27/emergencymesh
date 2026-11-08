@@ -1,9 +1,10 @@
 import { selectVisibleReport } from './view-selection.js';
 import { landmarksFor, reportedLocation, caseLocation, receptionSummary, sortReports } from './reception-data.js';
 import { createCampusMap, profileWithCampus } from './campus-map.js';
+import { hubMetrics, supplySelections, needsFor, allocationsFor, RESOURCE_LABELS, CATEGORY_LABELS, resourceUnit } from './ops-metrics.js';
 
 const $ = id => document.getElementById(id);
-const categories = { 1: 'Medical', 2: 'Fire', 3: 'Rescue', 4: 'Safety', 5: 'Supplies' };
+const categories = CATEGORY_LABELS;
 const priorities = { 1: 'Urgent', 2: 'Serious', 3: 'Assistance' };
 const views = ['requests', 'handoffs', 'reception', 'settings'];
 let state = null, selected = null, handoffSelected = null, csrf = '', busy = false, refreshing = false;
@@ -35,7 +36,7 @@ async function act(action) {
 function reports() { return sortReports(state?.incidents || []); }
 function campusProfile() { return profileWithCampus(state?.regionProfile, campusData); }
 function acceptMap(data) { if (campusData !== data) { campusData = data; render(); } }
-function coordinationLabel(item) { return item.coordination?.stage === 'simulated-dispatched' ? 'Service handoff complete' : item.coordination?.statusLabel || 'Saved at ECSW'; }
+function coordinationLabel(item) { return item.coordination?.stage === 'simulated-dispatched' ? 'Service handoff complete' : item.coordination?.stage === 'partial' ? 'Some resources still needed' : item.coordination?.statusLabel || 'Saved at ECSW'; }
 function setView(view, focus = false) { if (!views.includes(view)) return; currentView = view; history.replaceState(null, '', `#${view}`); render(); if (focus) $('content').focus(); }
 function openRequest(item) { selected = item.id; if (($('source').value === 'radio' && item.simulated) || ($('source').value === 'test' && !item.simulated)) $('source').value = 'all'; $('filter').value = 'all'; setView('requests', true); }
 function radioLabel(link = {}) {
@@ -54,6 +55,28 @@ function renderShell() {
   $('pause').textContent = state.automation?.paused ? 'Resume automation' : 'Pause automation'; $('pause').disabled = busy;
   for (const n of document.querySelectorAll('[data-view]')) { if (n.dataset.view === currentView) n.setAttribute('aria-current', 'page'); else n.removeAttribute('aria-current'); }
   for (const view of views) $(`${view}-view`).hidden = currentView !== view;
+  renderOperations();
+}
+
+function miniHistogram(sample, label) {
+  const NS = 'http://www.w3.org/2000/svg', chart = document.createElementNS(NS, 'svg'); chart.setAttribute('viewBox', '0 0 240 42'); chart.setAttribute('role', 'img'); chart.setAttribute('aria-label', `${label}. ${sample.total} requests in twelve five-minute bins.`);
+  const max = Math.max(1, ...sample.bins.map(b => b.count));
+  sample.bins.forEach((bin, i) => { const bar = document.createElementNS(NS, 'rect'); bar.setAttribute('x', String(i * 20 + 2)); bar.setAttribute('y', String(39 - bin.count / max * 35)); bar.setAttribute('width', '14'); bar.setAttribute('height', String(bin.count / max * 35)); bar.setAttribute('rx', '1'); const title = document.createElementNS(NS, 'title'); title.textContent = `${when(bin.start)}–${when(bin.end)}: ${bin.count}`; bar.append(title); chart.append(bar); });
+  const baseline = document.createElementNS(NS, 'path'); baseline.setAttribute('d', 'M0 40H240'); baseline.setAttribute('class', 'histogram-baseline'); chart.append(baseline); return chart;
+}
+function renderOperations() {
+  const root = $('operations-overview'); if (!root || !state) return; root.replaceChildren();
+  const m = hubMetrics(state), supervisor = state.automation?.supervisor || {}, local = state.automation?.model, remote = supervisor.agent;
+  const route = el('div', undefined, 'agent-route'); const from = el('div', undefined, 'agent-end'); from.append(el('strong', 'Local hub agent'), el('span', `${state.regionProfile?.hubName || 'ECSW'} · ${local?.name || state.ai?.model || 'Source rules'}`));
+  const exchange = el('div', undefined, 'agent-exchange'); exchange.append(el('span', `${m.acknowledged} acknowledged · ${m.pending} waiting`, 'exchange-count'));
+  const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); arrow.setAttribute('viewBox', '0 0 120 16'); arrow.setAttribute('aria-hidden', 'true'); const path = document.createElementNS('http://www.w3.org/2000/svg', 'path'); path.setAttribute('d', 'M2 5H117L111 1M117 11H2L8 15'); arrow.append(path); exchange.append(arrow);
+  exchange.append(el('span', m.lastAck ? `Last ACK ${when(m.lastAck)}` : 'No case ACK recorded', 'exchange-time'));
+  const to = el('div', undefined, 'agent-end'); to.append(el('strong', 'Regional agent'), el('span', remote?.model ? `${remote.model} · ${remote.hosting === 'brev' ? 'Brev GPU' : remote.hosting || 'Configured provider'}` : supervisor.connected ? 'Connected · provider details pending' : supervisor.configured ? 'Waiting for connection' : 'Not configured'));
+  to.append(el('span', `${m.returned} updates returned`, 'agent-note')); route.dataset.connected = String(Boolean(supervisor.connected));
+  route.append(from, exchange, to);
+  const stats = el('div', undefined, 'intake-measures'); const numbers = el('dl', undefined, 'measure-line'); for (const [label, value] of [['Radio requests', m.requests], ['Receptions', m.receptions], ['With GPS', m.gps], ['Needs attention', m.needsAttention]]) { const pair = el('div'); pair.append(el('dt', label), el('dd', String(value))); numbers.append(pair); }
+  const plot = el('div', undefined, 'intake-plot'); plot.append(miniHistogram(m.histogram, 'New radio requests in the last sixty minutes'), el('p', `${m.histogram.total} new in 60 min · 5 min bins`, 'plot-caption'));
+  stats.append(numbers, plot); root.append(route, stats, el('p', `Saved radio requests · Priority: ${m.priorities[0]} urgent, ${m.priorities[1]} serious, ${m.priorities[2]} assistance. Coordinated cases: ${m.sourceOnly} source-only · ${m.modelAssisted} model-assisted.`, 'operations-scope'));
 }
 async function refresh() {
   if (busy || refreshing) return; refreshing = true;
@@ -84,7 +107,7 @@ function renderRequests() {
     const location = caseLocation(report, campusProfile());
     const marker = el('span', ''); marker.className = 'report-marker'; marker.setAttribute('aria-hidden', 'true');
     const copy = el('div', undefined, 'report-copy'); const title = el('div', undefined, 'report-title'); title.append(el('strong', location.kind === 'unknown' ? 'Location needed' : location.label), el('span', when(report.receivedAt), 'report-time'));
-    const meta = el('div', undefined, 'report-meta'); meta.append(el('span', categories[report.request.category] || 'Emergency'), el('span', priorities[report.request.severity] || 'Priority not recorded', `priority p${report.request.severity}`), el('span', `${report.request.people} ${report.request.people === 1 ? 'person' : 'people'}`)); if (report.simulated) meta.append(el('span', 'Test', 'source-test'));
+    const meta = el('div', undefined, 'report-meta'); meta.append(el('span', categories[report.request.category] || 'Emergency'), el('span', priorities[report.request.severity] || 'Priority not recorded', `priority p${report.request.severity}`), el('span', `${report.request.people} ${report.request.people === 1 ? 'person' : 'people'}`)); const needs = supplySelections(report.request); if (needs.length) meta.append(el('span', `${needs.length} supply ${needs.length === 1 ? 'need' : 'needs'}`)); if (report.simulated) meta.append(el('span', 'Test', 'source-test'));
     copy.append(title, meta, el('div', clip(report.request.note || 'No additional note supplied.', 140), 'report-note')); b.append(marker, copy); list.append(b);
   }
   list.scrollTop = scroll;
@@ -97,24 +120,32 @@ function renderRequests() {
 function renderReport(root, item) {
   const c = item.coordination; const location = caseLocation(item, campusProfile());
   const top = el('div', undefined, 'detail-head'); top.append(el('span', `${item.simulated ? 'Test report · ' : ''}Received ${when(item.receivedAt, true)}`), el('span', priorities[item.request.severity] || 'Priority not recorded', `priority p${item.request.severity}`)); root.append(top);
-  root.append(el('h2', c?.summary?.headline || `${categories[item.request.category] || 'Emergency'} request`), el('p', `${item.request.people} ${item.request.people === 1 ? 'person' : 'people'} reported · ${categories[item.request.category] || 'Category not recorded'}`, 'detail-sub'));
-  const original = section('Original message'); original.append(el('p', item.request.note || 'No additional note supplied.', 'original original-block'), el('p', `${location.label} · ${location.provenance}${location.accuracy !== null ? ` · accuracy ${location.accuracy} m` : ''}`, 'location-note')); root.append(original, coordinationPanel(item), summaryDisclosure(item), sourceDisclosure(item));
+  root.append(el('h2', `${categories[item.request.category] || 'Emergency'} request`), el('p', `${item.request.people} ${item.request.people === 1 ? 'person' : 'people'} reported · ${priorities[item.request.severity] || 'Priority not recorded'}`, 'detail-sub'));
+  const signal = section('Reported by the phone', 'section reported-signal');
+  const selectedSupplies = supplySelections(item.request); signal.append(facts([['Danger', categories[item.request.category] || 'Not recorded'], ['Supplies selected', selectedSupplies.length ? selectedSupplies.map(name => RESOURCE_LABELS[name]).join(' · ') : 'None selected'], ['Location', location.label], ['Location source', location.provenance]]));
+  const concerns = [item.request.flags & 2 ? 'Breathing concern' : '', item.request.flags & 4 ? 'Trapped' : '', item.request.flags & 8 ? 'Severe bleeding' : ''].filter(Boolean);
+  if (concerns.length) signal.append(el('p', concerns.join(' · '), 'reported-concerns'));
+  const original = section('Additional note'); original.append(el('p', item.request.note || 'No additional note supplied.', item.request.note ? 'original original-block' : 'small muted'), el('p', location.accuracy !== null ? `Phone-reported GPS accuracy ${location.accuracy} m.` : 'GPS accuracy is not recorded.', 'location-note'));
+  root.append(signal, original, coordinationPanel(item), summaryDisclosure(item), sourceDisclosure(item));
 }
 function coordinationPanel(item) {
   const c = item.coordination; const n = section(state.automation?.paused ? 'Automation paused' : coordinationLabel(item), 'section coordination-state');
   let text = !c ? 'This is a saved reception from before automatic regional coordination. It has not been sent as a new case.' : c.error || (c.stage === 'simulated-dispatched' ? 'The supervisor completed the service handoff and returned its outcome.' : c.sharedRevision >= c.revision ? 'The supervisor has this revision. Updates return here automatically.' : 'ECSW prepares the source information and shares it with the supervisor automatically.');
   if (state.automation?.paused && c) text = 'New regional work is paused. Radio intake and saved reports remain available.';
-  n.append(el('p', text)); const actions = el('div', undefined, 'actions');
-  actions.append(button('Inspect summary', () => openDisclosure('summary-' + item.id)), button('Correct location', () => beginCorrection(item)));
+  n.append(el('p', text));
+  if (c) n.append(facts([['Local hub → regional agent', c.sentAt ? `Sent ${when(c.sentAt)}` : c.sharedRevision ? 'Source revision sent' : 'Waiting in the durable queue'], ['Regional acknowledgment', c.acknowledgedAt ? when(c.acknowledgedAt) : c.sharedRevision >= c.revision ? 'Current revision saved by regional agent' : 'Not yet recorded'], ['Returned update', c.lastUpdateAt ? when(c.lastUpdateAt) : 'Not yet recorded']]));
+  if (c?.unmetNeeds?.length) n.append(el('p', `Still needed: ${c.unmetNeeds.map(need => `${RESOURCE_LABELS[need.resource] || need.resource} · ${resourceUnit(need.resource, need.quantity)}`).join('; ')}.`, 'unmet-needs'));
+  const actions = el('div', undefined, 'actions');
+  actions.append(button('Inspect agent activity', () => openDisclosure('summary-' + item.id)), button('Correct location', () => beginCorrection(item)));
   if (c) actions.append(button('View regional handoff', () => { handoffSelected = item.id; setView('handoffs', true); }));
   n.append(actions); return n;
 }
 function openDisclosure(key) { const n = [...document.querySelectorAll('[data-disclosure]')].find(d => d.dataset.disclosure === key); if (n) { n.open = true; n.scrollIntoView({ block: 'nearest', behavior: 'auto' }); n.querySelector('summary').focus(); } }
 function summaryDisclosure(item) {
-  const d = disclosure('Summary and agent activity', 'summary-' + item.id); const s = item.coordination?.summary || item.summary;
-  d.append(el('p', s?.text || 'A source summary has not been prepared for this report.', 'small'));
-  if (s?.resource) d.append(facts([['Requested resource', s.resource], ['Quantity', String(s.quantity ?? 'Not selected')]]));
-  const source = s?.source === 'local-model' ? `Prepared with the local model${s.model ? ': ' + s.model : ''}.` : s?.source ? 'Prepared using source rules or verified source spans.' : 'Summary source not yet available.';
+  const d = disclosure('Local processing and agent activity', 'summary-' + item.id); const s = item.coordination?.summary || item.summary;
+  d.append(el('p', s?.source === 'signal' ? 'Read directly from the encrypted report. No model summary was needed.' : s?.text || 'Local processing is waiting for this report.', 'small'));
+  const needs = needsFor(item); if (needs.length) { const list = el('ul', undefined, 'planning-needs'); for (const need of needs) list.append(el('li', `${RESOURCE_LABELS[need.resource] || need.resource}: ${resourceUnit(need.resource, need.quantity)}`)); d.append(el('h3', 'Planning needs'), list, el('p', 'Quantities are derived by resource policy from the reported situation; they are not quantities entered on the phone.', 'fine')); }
+  const source = s?.source === 'signal' ? 'Direct signal fields.' : s?.source === 'local-model' ? `Local Nemotron assistance${s.model ? ': ' + s.model : ''}.` : s?.source ? 'Source rules or verified source spans.' : 'Processing source not yet available.';
   d.append(el('p', `${source} The original message and reported fields remain authoritative.`, 'fine'));
   if (item.coordination?.events?.length) d.append(eventList(item.coordination.events)); return d;
 }
@@ -123,7 +154,7 @@ function eventList(events) {
 }
 function sourceDisclosure(item) {
   const d = disclosure('Source details and receipt', 'source-' + item.id); const r = item.request; const loc = reportedLocation(item, campusProfile());
-  d.append(facts([['Original category', categories[r.category] || String(r.category)], ['Reported priority', priorities[r.severity] || String(r.severity)], ['People reported', String(r.people)], ['Source', item.simulated ? 'Synthetic test report' : 'Authenticated radio report'], ['Original location', loc.label], ['Location provenance', `${loc.provenance}${loc.accuracy !== null ? ' · accuracy ' + loc.accuracy + ' m' : ''}`], ['Phone report time', r.createdAt ? when(r.createdAt * 1000, true) : 'Not recorded'], ['Phone battery', r.battery === 255 ? 'Not recorded' : numeric(r.battery, '%')], ['RSSI', numeric(item.radio?.rssi, ' dBm')], ['SNR', numeric(item.radio?.snr, ' dB')], ['Radio receptions', String(item.receptions || 1)], ['Last received', when(item.lastReceivedAt, true)]]));
+  d.append(facts([['Original category', categories[r.category] || String(r.category)], ['Reported priority', priorities[r.severity] || String(r.severity)], ['People reported', String(r.people)], ['Source', item.simulated ? 'Synthetic test report' : 'Authenticated radio report'], ['Phone-selected supplies', supplySelections(r).map(name => RESOURCE_LABELS[name]).join(' · ') || 'None selected'], ['Original location', loc.label], ['Location provenance', `${loc.provenance}${loc.accuracy !== null ? ' · accuracy ' + loc.accuracy + ' m' : ''}`], ['Phone report time', r.createdAt ? when(r.createdAt * 1000, true) : 'Not recorded'], ['Phone battery', r.battery === 255 ? 'Not recorded' : numeric(r.battery, '%')], ['RSSI', numeric(item.radio?.rssi, ' dBm')], ['SNR', numeric(item.radio?.snr, ' dB')], ['Radio receptions', String(item.receptions || 1)], ['Last received', when(item.lastReceivedAt, true)]]));
   const concerns = [r.flags & 2 ? 'Breathing concern' : '', r.flags & 4 ? 'Trapped' : '', r.flags & 8 ? 'Severe bleeding' : ''].filter(Boolean).join(' · ');
   d.append(el('p', concerns ? `Phone-selected concerns: ${concerns}.` : 'No additional phone concern selected.', 'small'));
   const receipt = el('ul', undefined, 'receipt-list'); for (const [label, at] of [['Hub received', item.receivedAt], ['Human reviewed', item.reviewedAt]]) receipt.append(el('li', `${label}: ${at ? when(at, true) : 'Not recorded'}`)); d.append(receipt);
@@ -169,10 +200,12 @@ function renderHandoffs() {
   const pane = el('article', undefined, 'handoff-detail'); const c = selectedItem.coordination; pane.append(el('h2', c.summary?.headline || `${categories[selectedItem.request.category] || 'Emergency'} request`), el('p', `${coordinationLabel(selectedItem)}${selectedItem.simulated ? ' · Test intake' : ''}`, 'status-line'), el('p', selectedItem.request.note || 'No additional note supplied.', 'original original-block'));
   const information = section('Current handoff'); information.append(facts([['Case', c.caseId], ['Local revision', String(c.revision)], ['Supervisor revision', c.sharedRevision ? String(c.sharedRevision) : 'Not acknowledged'], ['Case location', caseLocation(selectedItem, campusProfile()).label]]));
   if (c.summary?.text) information.append(el('p', c.summary.text, 'small')); if (c.error) information.append(el('p', c.error, 'small')); pane.append(information);
-  if (c.allocation) {
-    const a = c.allocation; const allocation = section('Service allocation');
-    allocation.append(facts([['Town', a.townId || 'Not recorded'], ['Service', a.service || 'Not recorded'], ['Resource', a.resource || 'Not recorded'], ['Quantity', String(a.quantity ?? 'Not recorded')]]), el('p', a.simulation === true ? 'Allocation recorded by the regional supervisor.' : 'Allocation status has not been verified.', 'fine')); pane.append(allocation);
+  const allocations = allocationsFor(c, { embedded: true }); if (allocations.length) {
+    const allocation = section(allocations.length === 1 ? 'Resource allocation' : 'Resource allocations');
+    for (const a of allocations) allocation.append(facts([['Supplying town', a.townId || 'Not recorded'], ['Resource', RESOURCE_LABELS[a.resource] || a.resource || 'Not recorded'], ['Planning quantity', resourceUnit(a.resource, a.quantity)], ['Acknowledgment', a.acknowledgedAt ? when(a.acknowledgedAt) : 'Pending']]));
+    allocation.append(el('p', 'Reservations are recorded by the regional agent. Planning quantities are separate from the phone’s original selections.', 'fine')); pane.append(allocation);
   }
+  if (c.unmetNeeds?.length) pane.append(el('p', `Still needed: ${c.unmetNeeds.map(n => `${RESOURCE_LABELS[n.resource] || n.resource} · ${resourceUnit(n.resource, n.quantity)}`).join('; ')}.`, 'unmet-needs'));
   const activity = disclosure('Agent activity', 'handoff-activity-' + selectedItem.id); activity.append(c.events?.length ? eventList(c.events) : el('p', 'No agent activity recorded.', 'small')); pane.append(activity, button('Open original request', () => openRequest(selectedItem))); layout.append(list, pane); root.append(layout);
 }
 function supervisorLink() {

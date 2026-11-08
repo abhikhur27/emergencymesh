@@ -55,7 +55,9 @@ final class AppModel: ObservableObject {
         do {
             guard storageReady, let profile, let store else { throw MeshError.invalid("Import your private phone profile in Setup first.") }
             guard snapshot.outbox.count < 200 else { throw MeshError.invalid("Local history is full (200 requests). Clear history after recording any needed statuses.") }
-            let date = Date(); let fix = location.fix.flatMap { $0.isUsable(at: date) ? $0 : nil }
+            // Snapshot the freshest already available fix now. GPS never delays an urgent request;
+            // once sealed, retries keep this exact location and encrypted frame.
+            let date = Date(); let fix = location.currentFix(at: date)
             let battery = UIDevice.current.batteryLevel
             let percentage: UInt8 = battery >= 0 ? UInt8(max(0, min(100, (battery * 100).rounded()))) : 255
             let plaintext = try WireCodec.requestPlaintext(draft: draft, location: fix, battery: percentage, createdAt: date)

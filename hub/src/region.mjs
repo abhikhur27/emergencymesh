@@ -3,11 +3,12 @@ import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
 import publicRegion from '../../regions/utd-ecsw.json' with { type: 'json' };
 import { readJson, writeJsonAtomic } from './atomic-json.mjs';
+import { sourceNeedRequests } from './signal-fields.mjs';
 
 export const LANDMARK_CATALOG_VERSION = 2;
 const PUBLIC_REGION_FILE = fileURLToPath(new URL('../../regions/utd-ecsw.json', import.meta.url));
 const OFFICIAL_CATALOG_FILE = fileURLToPath(new URL('../../regions/utd-campus-map.json', import.meta.url));
-const RESOURCE_TYPES = ['water', 'supplies', 'medical', 'fire', 'rescue', 'safety'];
+const RESOURCE_TYPES = ['water', 'supplies', 'medical', 'fire', 'rescue', 'safety', 'food', 'medicine', 'power'];
 const MAP_NOTICE = 'Building names and approximate label anchors come from the official campus PDF. Building points are not phone GPS, radio coverage, or relay routes. The UI uses the original PDF paths; normalized anchors exist only for compatibility.';
 function normalizeProfile(value) {
   if (value?.schema !== 'rescuemesh.region.v1') return value;
@@ -67,7 +68,7 @@ export async function upgradeRegionCatalog(directory, { apply = false, catalogFi
   const landmarks = catalog.landmarks.map(l => { const previous = existing.get(l.id); return { ...previous, ...l, aliases: aliases([...(previous?.aliases || []), ...l.aliases]) }; });
   // Preserve private custom landmarks and unknown per-landmark fields alongside the sourced catalog.
   landmarks.push(...current.landmarks.filter(l => !officialIds.has(l.id.toLowerCase())));
-  const next = { ...saved, landmarks, landmarkCatalogVersion: LANDMARK_CATALOG_VERSION, landmarkCatalog: { ...saved.landmarkCatalog, ...catalog.metadata } };
+  const next = { ...saved, landmarks, resources:[...new Set([...current.resources,...RESOURCE_TYPES])], landmarkCatalogVersion: LANDMARK_CATALOG_VERSION, landmarkCatalog: { ...saved.landmarkCatalog, ...catalog.metadata } };
   validateProfile(normalizeProfile(next)); const changed = JSON.stringify(saved) !== JSON.stringify(next);
   if (apply && changed) await writeJsonAtomic(file, next);
   return { changed, applied: Boolean(apply && changed), fromVersion, toVersion: LANDMARK_CATALOG_VERSION, landmarksBefore: current.landmarks.length, officialLandmarks: catalog.landmarks.length, landmarksAfter: landmarks.length, privateIdentityPreserved: true, incidentsTouched: false, credentialsTouched: false, keysTouched: false };
@@ -92,6 +93,5 @@ export function incidentLocation(item, region = DEFAULT_REGION) {
   return { kind: 'unknown', label: 'Location not provided', provenance: 'unknown', verified: false };
 }
 export function sourceResource(request) {
-  if (request.category === 5 && /\b(water|drink(?:ing)?|hydration)\b/i.test(request.note || '')) return 'water';
-  return ({ 1: 'medical', 2: 'fire', 3: 'rescue', 4: 'safety', 5: 'supplies' })[request.category];
+  return sourceNeedRequests(request)[0]?.resource;
 }

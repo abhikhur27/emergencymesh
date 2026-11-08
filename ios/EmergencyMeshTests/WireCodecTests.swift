@@ -54,6 +54,91 @@ final class WireCodecTests: XCTestCase {
         let p = try WireCodec.requestPlaintext(draft: RequestDraft(), location: old, battery: 0, createdAt: date)
         XCTAssertEqual(p[3] & 1, 0)
     }
+    func testEverySupplyCombinationPreservesLegacyFlagsAndNoteBytes() throws {
+        let date = Date(timeIntervalSince1970: 1794000000)
+        let fix = LocationFix(latitude: 32.9858, longitude: -96.7501, accuracy: 12, capturedAt: date)
+        // Exhaust all 256 flags values: new supply bits must not overwrite GPS or concerns.
+        for expected in UInt16(0)...UInt16(255) {
+            let flags = UInt8(expected)
+            let selected = Set(SupplyNeed.allCases.filter { flags & $0.rawValue != 0 })
+            let draft = RequestDraft(breathingConcern: flags & 2 != 0, trapped: flags & 4 != 0,
+                                     severeBleeding: flags & 8 != 0, supplies: selected, note: "East door")
+            let payload = try WireCodec.requestPlaintext(draft: draft, location: flags & 1 == 0 ? nil : fix, battery: 77, createdAt: date)
+            XCTAssertEqual(payload[3], flags, "Flags \(expected)")
+            XCTAssertEqual(payload.count, 20 + draft.byteCount)
+            XCTAssertEqual(payload[19], UInt8(draft.byteCount))
+            XCTAssertEqual(String(data: payload.dropFirst(20), encoding: .utf8), "East door")
+        }
+    }
+    func testNewCategoriesKeepExistingWireIDs() throws {
+        let date = Date(timeIntervalSince1970: 1794000000)
+        let categories: [EmergencyCategory] = [.medical, .fire, .rescue, .safety, .supplies, .flood, .earthquake, .other]
+        for (index, category) in categories.enumerated() {
+            let payload = try WireCodec.requestPlaintext(draft: RequestDraft(category: category), location: nil, battery: 255, createdAt: date)
+            XCTAssertEqual(payload[0], UInt8(index + 1))
+            XCTAssertEqual(payload.count, 20)
+        }
+    }
+    func testLegacyDraftWithoutSuppliesPreservesAllFields() throws {
+        let legacy = Data(#"{"category":3,"severity":2,"people":7,"breathingConcern":true,"trapped":true,"severeBleeding":false,"note":"North stairwell"}"#.utf8)
+        let restored = try JSONDecoder().decode(RequestDraft.self, from: legacy)
+        XCTAssertEqual(restored, RequestDraft(category: .rescue, severity: .serious, people: 7,
+                                              breathingConcern: true, trapped: true, note: "North stairwell"))
+        XCTAssertTrue(restored.supplies.isEmpty)
+        let selected = RequestDraft(category: .flood, supplies: [.water, .medicine, .power], note: "Upper floor")
+        XCTAssertEqual(try JSONDecoder().decode(RequestDraft.self, from: JSONEncoder().encode(selected)), selected)
+    }
+    func testLegacySavedHistoryWithoutSuppliesRetainsRetryFrameAndReceiptState() throws {
+        let date = Date(timeIntervalSince1970: 1794000000)
+        let draft = RequestDraft(category: .rescue, people: 3, trapped: true, note: "North stairwell")
+        let plaintext = try WireCodec.requestPlaintext(draft: draft, location: nil, battery: 255, createdAt: date)
+        let frame = try WireCodec.seal(type: 1, plaintext: plaintext, profile: profile, sequence: 42)
+        var item = OutboxItem(origin: profile.origin, sequence: 42, createdAt: date, draft: draft, location: nil, frame: frame)
+        item.status = .submitted; item.attemptCount = 2; item.firstAttemptAt = date; item.lastAttemptAt = date
+        item.receiptText = "Previously saved text"
+        var snapshot = AppSnapshot(); snapshot.draft = draft; snapshot.outbox = [item]
+        snapshot.receiptDigests = ["123-7": "saved-authenticated-digest"]
+        var legacy = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(snapshot)) as? [String: Any])
+        var oldDraft = try XCTUnwrap(legacy["draft"] as? [String: Any]); oldDraft.removeValue(forKey: "supplies"); legacy["draft"] = oldDraft
+        var oldItems = try XCTUnwrap(legacy["outbox"] as? [[String: Any]])
+        var oldItemDraft = try XCTUnwrap(oldItems[0]["draft"] as? [String: Any]); oldItemDraft.removeValue(forKey: "supplies")
+        oldItems[0]["draft"] = oldItemDraft; legacy["outbox"] = oldItems
+        let restored = try JSONDecoder().decode(AppSnapshot.self, from: JSONSerialization.data(withJSONObject: legacy))
+        let saved = try XCTUnwrap(restored.outbox.first)
+        XCTAssertEqual(restored.draft, draft); XCTAssertEqual(saved.draft, draft)
+        XCTAssertTrue(saved.draft.supplies.isEmpty); XCTAssertEqual(saved.frame, frame)
+        XCTAssertEqual(saved.sequence, 42); XCTAssertEqual(saved.attemptCount, 2); XCTAssertEqual(saved.status, .submitted)
+        XCTAssertEqual(saved.firstAttemptAt, date); XCTAssertEqual(saved.lastAttemptAt, date)
+        XCTAssertEqual(saved.receiptText, "Previously saved text"); XCTAssertEqual(restored.receiptDigests, snapshot.receiptDigests)
+        XCTAssertEqual(try WireCodec.open(saved.frame, profile: profile, expectedType: 1), plaintext)
+    }
+    func testFreshestUsableGPSIsSelectedAtSendTime() throws {
+        let date = Date(timeIntervalSince1970: 1794000000)
+        let olderAccurate = LocationFix(latitude: 32, longitude: -96, accuracy: 2, capturedAt: date.addingTimeInterval(-60))
+        let freshest = LocationFix(latitude: 33, longitude: -97, accuracy: 30, capturedAt: date.addingTimeInterval(-2))
+        let expired = LocationFix(latitude: 34, longitude: -98, accuracy: 1, capturedAt: date.addingTimeInterval(-121))
+        let invalid = LocationFix(latitude: 91, longitude: -98, accuracy: 1, capturedAt: date)
+        let future = LocationFix(latitude: 34, longitude: -98, accuracy: 1, capturedAt: date.addingTimeInterval(121))
+        let selected = LocationFix.latestUsable([olderAccurate, freshest, expired, invalid, future], at: date)
+        XCTAssertEqual(selected, freshest)
+        let payload = try WireCodec.requestPlaintext(draft: RequestDraft(supplies: [.water]), location: selected, battery: 255, createdAt: date)
+        XCTAssertEqual(payload[3], 1 | 32)
+        XCTAssertEqual(try payload.readLE(Int32.self, at: 8), 3_300_000)
+        XCTAssertEqual(try payload.readLE(Int32.self, at: 12), -9_700_000)
+        // A later send must re-evaluate freshness rather than carrying forward the old selection.
+        XCTAssertNil(LocationFix.latestUsable([olderAccurate, freshest, expired, invalid], at: date.addingTimeInterval(121)))
+    }
+    func testUnavailableGPSLeavesSupplyFlagsAndUsesUnknownLocationSentinel() throws {
+        let date = Date(timeIntervalSince1970: 1794000000)
+        let expired = LocationFix(latitude: 32, longitude: -96, accuracy: 5, capturedAt: date.addingTimeInterval(-121))
+        let fix = LocationFix.latestUsable([expired], at: date)
+        XCTAssertNil(fix)
+        let payload = try WireCodec.requestPlaintext(draft: RequestDraft(supplies: [.food, .power]), location: fix, battery: 255, createdAt: date)
+        XCTAssertEqual(payload[3], 16 | 128)
+        XCTAssertEqual(try payload.readLE(Int32.self, at: 8), 0)
+        XCTAssertEqual(try payload.readLE(Int32.self, at: 12), 0)
+        XCTAssertEqual(try payload.readLE(UInt16.self, at: 16), UInt16.max)
+    }
     func testChunkReassemblyOutOfOrderAndDuplicates() throws {
         let frame = try WireCodec.seal(type: 1, plaintext: request(), profile: profile, sequence: 42)
         let chunks = try BLEFraming.chunks(frame: frame, transferID: 9)
@@ -129,8 +214,9 @@ final class WireCodecTests: XCTestCase {
     }
     func testSavedOutboxRetainsTheOriginalFrameForRetries() throws {
         let date = Date(timeIntervalSince1970: 1794000000)
-        var draft = RequestDraft(); draft.note = String(repeating: "a", count: 120)
+        var draft = RequestDraft(supplies: [.food, .water, .medicine, .power]); draft.note = String(repeating: "a", count: 120)
         let plaintext = try WireCodec.requestPlaintext(draft: draft, location: nil, battery: 255, createdAt: date)
+        XCTAssertEqual(plaintext[3], 0xf0)
         let frame = try WireCodec.seal(type: 1, plaintext: plaintext, profile: profile, sequence: 42)
         XCTAssertEqual(frame.count, 184); XCTAssertLessThanOrEqual(frame.count, WireCodec.maxFrame)
         var snapshot = AppSnapshot()
@@ -138,6 +224,7 @@ final class WireCodecTests: XCTestCase {
         let restored = try JSONDecoder().decode(AppSnapshot.self, from: JSONEncoder().encode(snapshot))
         XCTAssertEqual(restored.outbox.first?.frame, frame)
         XCTAssertEqual(restored.outbox.first?.sequence, 42)
+        XCTAssertEqual(restored.outbox.first?.draft.supplies, draft.supplies)
         XCTAssertEqual(try WireCodec.open(try XCTUnwrap(restored.outbox.first?.frame), profile: profile, expectedType: 1), plaintext)
     }
 }

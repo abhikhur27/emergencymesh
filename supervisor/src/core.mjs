@@ -1,10 +1,25 @@
 import { createHash } from 'node:crypto';
-import { validateCase, bodyDigest, deriveNeed, immutableSource, TOWN_IDS } from './schema.mjs';
+import { validateCase, bodyDigest, deriveNeed, deriveNeeds, immutableSource, TOWN_IDS } from './schema.mjs';
 import { event, publish, available } from './store.mjs';
 import { NemotronPlanner } from './planner.mjs';
 import { SimulatedDispatchAdapter } from './dispatch.mjs';
 
 const nowDefault=()=>Date.now();
+const allocationsOf=item=>Array.isArray(item.allocations)?item.allocations:item.allocation?[item.allocation]:[];
+function syncPrimary(item){item.allocations=allocationsOf(item);item.allocation=item.allocations[0]?structuredClone(item.allocations[0]):null;}
+function updateFulfillment(item,needs,now){
+  syncPrimary(item);const active=item.allocations.filter(a=>!a.released),unmet=needs.filter(n=>!active.some(a=>a.resource===n.resource));
+  item.unmetNeeds=unmet.map(n=>({...n,reason:'No eligible resource is currently available.'}));
+  if(unmet.length){item.status=active.length?'partial':'needs-review';item.reason='Waiting for '+unmet.map(n=>n.resource).join(', ')+'. Existing reservations are preserved.';item.nextRetryAt=now+30000;}
+  else if(active.every(a=>a.acknowledgedAt)){item.status='simulated-dispatched';item.reason=null;item.nextRetryAt=0;}
+  else{item.status='allocated';item.reason=active.some(a=>a.dispatchError)?'Service acknowledgment pending; reservations preserved.':null;item.nextRetryAt=0;}
+}
+function allocationFor(item,need,townId,at,agent){
+  // Keep legacy single-request dispatch identities stable across the upgrade.
+  const key=item.summary.needRequests?.length>1?item.caseId+'|'+need.resource:item.caseId;
+  const dispatchId='dispatch-'+createHash('sha256').update(key).digest('hex').slice(0,24);
+  return {id:'allocation-'+dispatchId.slice(9),caseId:item.caseId,townId,resource:need.resource,quantity:need.quantity,quantityBasis:need.quantityBasis||'policy-one-team',simulation:true,service:townId[0].toUpperCase()+townId.slice(1)+' simulated '+need.resource+' service',dispatchId,reservedAt:at,released:false,agent};
+}
 export class SupervisorCore {
   constructor({store,planner=new NemotronPlanner(),dispatcher=new SimulatedDispatchAdapter(),now=nowDefault}={}){
     this.store=store;this.planner=planner;this.dispatcher=dispatcher;this.now=now;this.jobs=new Set();this.running=null;this.closed=false;this.timer=null;
@@ -23,6 +38,7 @@ export class SupervisorCore {
         if(incoming.revision===existing.revision)throw Object.assign(new Error('Conflicting case revision'),{status:409});
         existing.seenEvents.push({eventId:incoming.eventId,digest});if(existing.seenEvents.length>1000)throw Object.assign(new Error('Case revision limit reached'),{status:409});
         Object.assign(existing,{eventId:incoming.eventId,revision:incoming.revision,summary:incoming.summary,location:incoming.location});
+        if(incoming.sourceAgent)existing.sourceAgent=incoming.sourceAgent;
         existing.updatedAt=this.now();
         event(state,existing,'case_updated',{actor:'local-hub',detail:'A newer source-preserving case revision arrived.'},this.now());
         if(!existing.allocation){existing.status=state.automationPaused?'paused':'received';existing.reason=null;}
@@ -30,7 +46,7 @@ export class SupervisorCore {
         return {accepted:true,eventId:incoming.eventId,caseId:existing.caseId,revision:existing.revision,status:existing.status};
       }
       if(!internalSimulation&&state.cases.filter(c=>!c.internalSimulation).length>=2000)throw Object.assign(new Error('Supervisor live case capacity reached'),{status:409});
-      const item={...incoming,createdAt:this.now(),updatedAt:this.now(),status:state.automationPaused?'paused':'received',reason:null,events:[],seenEvents:[{eventId:incoming.eventId,digest}],allocation:null,agent:null,internalSimulation,runId,archived:false};
+      const item={...incoming,createdAt:this.now(),updatedAt:this.now(),status:state.automationPaused?'paused':'received',reason:null,events:[],seenEvents:[{eventId:incoming.eventId,digest}],allocation:null,allocations:[],unmetNeeds:[],agent:null,internalSimulation,runId,archived:false};
       state.cases.push(item);event(state,item,'case_received',{actor:'supervisor',detail:'Structured source fields saved before planning.'},this.now());publish(state,item,this.now());
       return {accepted:true,eventId:incoming.eventId,caseId:item.caseId,revision:item.revision,status:item.status};
     });
@@ -47,54 +63,80 @@ export class SupervisorCore {
   async process(caseId){
     let snapshot=this.store.state.cases.find(c=>c.caseId===caseId);
     if(!snapshot||snapshot.archived)return;
-    if(this.store.state.automationPaused){await this.store.transact(state=>{const item=state.cases.find(c=>c.caseId===caseId);if(item&&!item.allocation){item.status='paused';item.reason='Automatic coordination is paused.';publish(state,item,this.now());}});return;}
-    if(snapshot.allocation){if(snapshot.status!=='simulated-dispatched')await this.dispatch(caseId);return;}
-    snapshot=structuredClone(snapshot);const revision=snapshot.revision,need=deriveNeed(snapshot);
-    if(snapshot.source.receivedAt>this.now()+300000)need.issues.push('The source timestamp is in the future; confirm the local hub clock.');
-    if(this.now()-snapshot.source.receivedAt>3600000)need.issues.push('The source request is older than one hour; confirm that help is still needed.');
-    await this.store.transact(state=>{const item=state.cases.find(c=>c.caseId===caseId);if(!item||item.revision!==revision)return;event(state,item,'validate_case',{actor:'supervisor',detail:need.issues.length?'Required evidence needs attention.':'Source fields and simulation policy validated.'},this.now());if(need.issues.length){item.status='needs-review';item.reason=need.issues.join(' ');}else{item.status='planning';item.reason=null;}publish(state,item,this.now());});
-    if(need.issues.length)return;
-    const catalog=this.catalog(snapshot,need);
-    await this.store.transact(state=>{const item=state.cases.find(c=>c.caseId===caseId);if(item?.revision===revision)event(state,item,'resource_catalog',{actor:'resource-tool',resource:need.resource,options:catalog,detail:'Read simulated town inventory.'},this.now());});
-    const proposal=await this.planner.plan(snapshot,need,catalog,async(action,args,result)=>{
-      await this.store.transact(state=>{const item=state.cases.find(c=>c.caseId===caseId);if(item?.revision===revision)event(state,item,action,{actor:'nemotron-tool',arguments:args,result,detail:action==='lookup_resources'?'Model queried the resource catalog.':'Model proposed a policy-gated allocation.'},this.now());});
-    });
-    await this.store.transact(state=>{
-      const item=state.cases.find(c=>c.caseId===caseId);if(!item||item.archived)return;
-      if(item.revision!==revision){this.jobs.add(caseId);return;}
-      if(state.automationPaused){item.status='paused';item.reason='Paused before reservation; no stock deducted.';publish(state,item,this.now());return;}
-      if(item.allocation)return;
-      item.agent={source:proposal?.source||'rules-fallback',model:proposal?.source==='nemotron-tools'?this.planner.model:null,at:this.now()};
-      if(!proposal||proposal.resource!==need.resource||proposal.quantity!==need.quantity||!TOWN_IDS.includes(proposal.townId)||proposal.townId===item.hubId||state.hubs.find(h=>h.id===proposal.townId)?.enabled===false||available(state,proposal.townId,need.resource)<need.quantity){
-        item.status='needs-review';item.reason='No eligible simulated resource can fulfill this request.';event(state,item,'allocation_exception',{actor:'policy',detail:item.reason},this.now());publish(state,item,this.now());return;
-      }
-      const dispatchId='dispatch-'+createHash('sha256').update(item.caseId).digest('hex').slice(0,24);
-      const allocation={id:'allocation-'+dispatchId.slice(9),caseId:item.caseId,townId:proposal.townId,resource:need.resource,quantity:need.quantity,simulation:true,service:proposal.townId[0].toUpperCase()+proposal.townId.slice(1)+' simulated '+need.resource+' service',dispatchId,reservedAt:this.now(),released:false};
-      state.allocations.push(allocation);item.allocation=structuredClone(allocation);item.status='allocated';item.reason=null;
-      event(state,item,'resource_allocated',{actor:'policy',townId:proposal.townId,resource:need.resource,quantity:need.quantity,remaining:available(state,proposal.townId,need.resource),detail:'Eligible simulated stock reserved once.'},this.now());publish(state,item,this.now());
-    });
+    if(this.store.state.automationPaused){await this.store.transact(state=>{const item=state.cases.find(c=>c.caseId===caseId);if(item){item.status='paused';item.reason='Automatic coordination is paused.';publish(state,item,this.now());}});return;}
+    snapshot=structuredClone(snapshot);const revision=snapshot.revision,derived=deriveNeeds(snapshot),needs=derived.needs;
+    const existing=allocationsOf(snapshot).filter(a=>!a.released);
+    if(needs.every(n=>existing.some(a=>a.resource===n.resource))){await this.dispatch(caseId);return;}
+    if(snapshot.source.receivedAt>this.now()+300000)derived.issues.push('The source timestamp is in the future; confirm the local hub clock.');
+    if(this.now()-snapshot.source.receivedAt>3600000)derived.issues.push('The source request is older than one hour; confirm that help is still needed.');
+    await this.store.transact(state=>{const item=state.cases.find(c=>c.caseId===caseId);if(!item||item.revision!==revision)return;event(state,item,'validate_case',{actor:'supervisor',detail:derived.issues.length?'Required evidence needs attention.':'Source fields and planning quantity policy validated.'},this.now());if(derived.issues.length){item.status=existing.length?'partial':'needs-review';item.reason=derived.issues.join(' ');}else{item.status='planning';item.reason=null;}publish(state,item,this.now());});
+    if(derived.issues.length){if(existing.length)await this.dispatch(caseId);return;}
+    for(const need of needs){
+      const current=this.store.state.cases.find(c=>c.caseId===caseId);
+      if(!current||current.archived||current.revision!==revision){if(current&&!current.archived)this.jobs.add(caseId);return;}
+      if(allocationsOf(current).some(a=>a.resource===need.resource&&!a.released))continue;
+      const catalog=this.catalog(current,need);
+      await this.store.transact(state=>{const item=state.cases.find(c=>c.caseId===caseId);if(item?.revision===revision)event(state,item,'resource_catalog',{actor:'resource-tool',resource:need.resource,quantityBasis:need.quantityBasis,options:catalog,detail:'Read simulated town inventory for this planning need.'},this.now());});
+      const proposal=catalog.some(t=>t.available>=need.quantity)?await this.planner.plan(structuredClone(current),need,catalog,async(action,args,result)=>{
+        await this.store.transact(state=>{const item=state.cases.find(c=>c.caseId===caseId);if(item?.revision===revision)event(state,item,action,{actor:'nemotron-tool',resource:need.resource,arguments:args,result,detail:action==='lookup_resources'?'Model queried the resource catalog.':'Model proposed a policy-gated allocation.'},this.now());});
+      }):null;
+      let stop=false;
+      await this.store.transact(state=>{
+        const item=state.cases.find(c=>c.caseId===caseId);if(!item||item.archived){stop=true;return;}
+        if(item.revision!==revision){this.jobs.add(caseId);stop=true;return;}
+        if(state.automationPaused){item.status='paused';item.reason='Paused before the next reservation; existing stock reservations preserved.';publish(state,item,this.now());stop=true;return;}
+        syncPrimary(item);if(item.allocations.some(a=>a.resource===need.resource&&!a.released))return;
+        const agent={source:proposal?.source||'rules-fallback',model:proposal?.source==='nemotron-tools'?this.planner.model:null,at:this.now()};
+        if(!proposal||proposal.resource!==need.resource||proposal.quantity!==need.quantity||!TOWN_IDS.includes(proposal.townId)||proposal.townId===item.hubId||state.hubs.find(h=>h.id===proposal.townId)?.enabled===false||available(state,proposal.townId,need.resource)<need.quantity){
+          event(state,item,'allocation_exception',{actor:'policy',resource:need.resource,detail:'No eligible simulated stock can fulfill this planning need.'},this.now());updateFulfillment(item,needs,this.now());publish(state,item,this.now());return;
+        }
+        const allocation=allocationFor(item,need,proposal.townId,this.now(),agent);
+        state.allocations.push(allocation);item.allocations.push(structuredClone(allocation));item.agent ||= agent;syncPrimary(item);updateFulfillment(item,needs,this.now());
+        event(state,item,'resource_allocated',{actor:'policy',townId:proposal.townId,resource:need.resource,quantity:need.quantity,quantityBasis:need.quantityBasis,remaining:available(state,proposal.townId,need.resource),detail:'Eligible simulated stock reserved once for this resource.'},this.now());publish(state,item,this.now());
+      });
+      if(stop)return;
+    }
     await this.dispatch(caseId);
   }
   async dispatch(caseId){
-    const item=this.store.state.cases.find(c=>c.caseId===caseId);if(!item?.allocation||item.archived||item.allocation.released||item.status==='simulated-dispatched'||this.store.state.automationPaused)return;
-    let ack;try{ack=await this.dispatcher.send(structuredClone(item.allocation),structuredClone(item));if(ack.simulation!==true||ack.realServicesContacted!==false||ack.dispatchId!==item.allocation.dispatchId||ack.quantity!==item.allocation.quantity||ack.townId!==item.allocation.townId)throw new Error('Invalid simulated acknowledgment');}
-    catch{await this.store.transact(state=>{const current=state.cases.find(c=>c.caseId===caseId);if(current&&current.status!=='simulated-dispatched'){current.status='allocated';current.reason='Simulated service acknowledgment pending; reservation preserved.';event(state,current,'dispatch_pending',{actor:'simulated-service',detail:current.reason},this.now());publish(state,current,this.now());}});return;}
-    await this.store.transact(state=>{const current=state.cases.find(c=>c.caseId===caseId);if(!current?.allocation||current.archived||current.allocation.released||current.status==='simulated-dispatched')return;current.allocation={...current.allocation,acknowledgment:ack.acknowledgment,acknowledgedAt:ack.acceptedAt};current.status='simulated-dispatched';current.reason=null;event(state,current,'simulated_dispatch',{actor:'simulated-service',townId:ack.townId,service:ack.service,dispatchId:ack.dispatchId,detail:'Simulation endpoint acknowledged. No emergency services contacted.'},this.now());publish(state,current,this.now());});
+    let item=this.store.state.cases.find(c=>c.caseId===caseId);if(!item||item.archived||this.store.state.automationPaused)return;
+    const needs=deriveNeeds(item).needs;
+    for(const allocation of allocationsOf(item).filter(a=>!a.released&&!a.acknowledgedAt)){
+      if(this.store.state.automationPaused)return;
+      let ack;try{
+        ack=await this.dispatcher.send(structuredClone(allocation),structuredClone(item));
+        if(ack.simulation!==true||ack.realServicesContacted!==false||ack.dispatchId!==allocation.dispatchId||ack.quantity!==allocation.quantity||ack.townId!==allocation.townId||ack.resource!==allocation.resource||!Number.isFinite(ack.acceptedAt)||typeof ack.acknowledgment!=='string'||ack.acknowledgment.length>160)throw new Error('Invalid simulated acknowledgment');
+      }catch{
+        await this.store.transact(state=>{const current=state.cases.find(c=>c.caseId===caseId),saved=allocationsOf(current||{}).find(a=>a.id===allocation.id);if(!current||current.archived||!saved||saved.released||saved.acknowledgedAt)return;saved.dispatchError='Service acknowledgment pending';updateFulfillment(current,needs,this.now());event(state,current,'dispatch_pending',{actor:'simulated-service',resource:allocation.resource,dispatchId:allocation.dispatchId,detail:'Service acknowledgment pending; this reservation is preserved.'},this.now());publish(state,current,this.now());});continue;
+      }
+      await this.store.transact(state=>{
+        const current=state.cases.find(c=>c.caseId===caseId),saved=allocationsOf(current||{}).find(a=>a.id===allocation.id);if(!current||current.archived||!saved||saved.released||saved.acknowledgedAt)return;
+        Object.assign(saved,{acknowledgment:ack.acknowledgment,acknowledgedAt:ack.acceptedAt});delete saved.dispatchError;
+        const global=state.allocations.find(a=>a.id===saved.id);if(global)Object.assign(global,{acknowledgment:ack.acknowledgment,acknowledgedAt:ack.acceptedAt});
+        updateFulfillment(current,needs,this.now());event(state,current,'simulated_dispatch',{actor:'simulated-service',townId:ack.townId,service:ack.service,resource:ack.resource,dispatchId:ack.dispatchId,detail:'Simulation endpoint acknowledged. No emergency services contacted.'},this.now());publish(state,current,this.now());
+      });
+      item=this.store.state.cases.find(c=>c.caseId===caseId);
+    }
   }
   async setPaused(paused){
     if(typeof paused!=='boolean')throw Object.assign(new Error('Paused must be boolean'),{status:400});
     await this.store.transact(state=>{state.automationPaused=paused;event(state,null,paused?'automation_paused':'automation_resumed',{actor:'operator',detail:'Supervisor automation '+(paused?'paused.':'resumed.')},this.now());});
     if(!paused)this.retryPending();
   }
-  retryPending(){for(const item of this.store.state.cases)if(!item.archived&&['received','planning','paused','allocated'].includes(item.status))this.enqueue(item.caseId);}
+  retryPending(){for(const item of this.store.state.cases)if(!item.archived&&(['received','planning','paused','allocated'].includes(item.status)||item.status==='partial'&&(!item.nextRetryAt||this.now()>=item.nextRetryAt)))this.enqueue(item.caseId);}
   async resolve(caseId,{action,townId}={}){
     if(!['alternate','pending','retry'].includes(action))throw Object.assign(new Error('Unsupported exception action'),{status:400});
     const current=this.store.state.cases.find(c=>c.caseId===caseId);if(!current)throw Object.assign(new Error('Case not found'),{status:404});
-    if(action==='pending'){await this.store.transact(state=>{const item=state.cases.find(c=>c.caseId===caseId);if(item.allocation)throw Object.assign(new Error('A reserved handoff cannot be put back into pending'),{status:409});item.status='needs-review';item.reason='Kept pending by an operator.';event(state,item,'operator_pending',{actor:'operator',detail:item.reason},this.now());publish(state,item,this.now());});return;}
+    if(action==='pending'){await this.store.transact(state=>{const item=state.cases.find(c=>c.caseId===caseId);if(allocationsOf(item).some(a=>!a.released))throw Object.assign(new Error('A reserved handoff cannot be put back into pending'),{status:409});item.status='needs-review';item.reason='Kept pending by an operator.';event(state,item,'operator_pending',{actor:'operator',detail:item.reason},this.now());publish(state,item,this.now());});return;}
     if(action==='retry'){this.enqueue(caseId);return;}
-    const need=deriveNeed(current);if(need.issues.length||current.allocation||!TOWN_IDS.includes(townId))throw Object.assign(new Error('An alternate cannot be reserved for this case'),{status:409});
-    await this.store.transact(state=>{const item=state.cases.find(c=>c.caseId===caseId);if(state.automationPaused||item.allocation||townId===item.hubId||state.hubs.find(h=>h.id===townId)?.enabled===false||available(state,townId,need.resource)<need.quantity)throw Object.assign(new Error('Alternate unavailable or automation paused'),{status:409});
-      const dispatchId='dispatch-'+createHash('sha256').update(item.caseId).digest('hex').slice(0,24);const allocation={id:'allocation-'+dispatchId.slice(9),caseId:item.caseId,townId,resource:need.resource,quantity:need.quantity,simulation:true,service:townId[0].toUpperCase()+townId.slice(1)+' simulated '+need.resource+' service',dispatchId,reservedAt:this.now(),released:false};state.allocations.push(allocation);item.allocation=structuredClone(allocation);item.status='allocated';item.reason=null;event(state,item,'operator_alternate',{actor:'operator',townId,resource:need.resource,quantity:need.quantity,remaining:available(state,townId,need.resource),detail:'An operator selected an eligible simulated alternative.'},this.now());publish(state,item,this.now());});
+    const derived=deriveNeeds(current),need=derived.needs.find(n=>!allocationsOf(current).some(a=>a.resource===n.resource&&!a.released));
+    if(derived.issues.length||!need||!TOWN_IDS.includes(townId))throw Object.assign(new Error('An alternate cannot be reserved for this case'),{status:409});
+    await this.store.transact(state=>{
+      const item=state.cases.find(c=>c.caseId===caseId);syncPrimary(item);
+      if(state.automationPaused||item.allocations.some(a=>a.resource===need.resource&&!a.released)||townId===item.hubId||state.hubs.find(h=>h.id===townId)?.enabled===false||available(state,townId,need.resource)<need.quantity)throw Object.assign(new Error('Alternate unavailable or automation paused'),{status:409});
+      const allocation=allocationFor(item,need,townId,this.now(),{source:'operator',model:null,at:this.now()});state.allocations.push(allocation);item.allocations.push(structuredClone(allocation));item.agent ||= allocation.agent;updateFulfillment(item,derived.needs,this.now());
+      event(state,item,'operator_alternate',{actor:'operator',townId,resource:need.resource,quantity:need.quantity,quantityBasis:need.quantityBasis,remaining:available(state,townId,need.resource),detail:'An operator selected an eligible simulated alternative for one unfulfilled resource.'},this.now());publish(state,item,this.now());
+    });
     this.enqueue(caseId);
   }
   async contact(hubId){const previous=this.store.state.hubs.find(h=>h.id===hubId)?.lastContactAt;if(previous&&this.now()-previous<30000)return;await this.store.transact(state=>{const hub=state.hubs.find(h=>h.id===hubId);if(hub)hub.lastContactAt=this.now();});}
@@ -117,7 +159,7 @@ export class SupervisorCore {
   random(state){let x=state.simulation.randomState||4207;x^=x<<13;x^=x>>>17;x^=x<<5;state.simulation.randomState=x>>>0;return (x>>>0)/4294967296;}
   cycleSimulation(state,{reason='scheduled-cycle',running=state.simulation.running,seed=null}={}){
     const sim=state.simulation,simulated=state.cases.filter(c=>c.internalSimulation),archivedCases=simulated.filter(c=>!c.archived).length,ids=new Set(simulated.map(c=>c.caseId));
-    for(const item of simulated){item.archived=true;item.archivedAt=this.now();if(item.allocation){item.allocation.released=true;item.allocation.releasedAt=this.now();}}
+    for(const item of simulated){item.archived=true;item.archivedAt=this.now();for(const allocation of allocationsOf(item)){allocation.released=true;allocation.releasedAt=this.now();}syncPrimary(item);}
     for(const allocation of state.allocations)if(ids.has(allocation.caseId)){allocation.released=true;allocation.releasedAt=this.now();}
     const retained=new Set(simulated.slice(-24).map(c=>c.caseId));
     state.cases=state.cases.filter(c=>!c.internalSimulation||retained.has(c.caseId));
@@ -145,7 +187,12 @@ export class SupervisorCore {
       input={schema:'rescuemesh.case.v1',eventId:caseId+':r1',hubId:town,caseId,revision:1,source:{kind:'simulated',requestId:caseId,receivedAt:this.now()},request:{category,severity:3,people,note},summary:{text:people+' people request '+(water?'drinking water':'assistance')+'.',resource:category===5?(water?'water':'supplies'):['','medical','fire','rescue','safety'][category],quantity:category===5?people:1},location:{kind:'landmark',label:town[0].toUpperCase()+town.slice(1)+' demo check-in',verified:false}};
       for(const hub of state.hubs)if(hub.simulated&&hub.enabled)hub.lastContactAt=this.now();
     });
-    if(input)await this.receive(input,{internalSimulation:true,runId});
+    if(input){
+      let description={note:input.request.note,generation:{source:'seeded-policy',model:null,at:this.now()}};
+      if(this.planner.describeExercise)description=await this.planner.describeExercise(input).catch(()=>description);
+      input.request.note=description.note;input.generation=description.generation;
+      await this.receive(input,{internalSimulation:true,runId});
+    }
     return input?{caseId:input.caseId}:null;
   }
   async simulationCommand(body={}){

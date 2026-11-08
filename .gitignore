@@ -46,3 +46,9 @@ docs/receipts/
 **/runtime.json
 **/bridge.json
 !**/.env.example
+
+# Temoc local model/runtime binaries
+**/*.gguf
+**/*.gguf.part
+ios/TemocRuntime/Vendor/
+ios/TemocRuntime/*.zip

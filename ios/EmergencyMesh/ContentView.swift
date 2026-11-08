@@ -5,14 +5,18 @@ private let rescueMagenta = Color(red: 226.0 / 255, green: 0, blue: 116.0 / 255)
 private let campusTitle = "UT Dallas · ECSW"
 
 private enum RequestRoute: Hashable {
-    case details, review, receipt(String)
+    case receipt(String)
 }
 
 struct ContentView: View {
     @EnvironmentObject private var model: AppModel
+    @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @State private var tab = 0
     @State private var path: [RequestRoute] = []
     @State private var showingDevices = false
+    @State private var submitting = false
+    @FocusState private var notesFocused: Bool
 
     var body: some View {
         TabView(selection: $tab) {
@@ -20,18 +24,15 @@ struct ContentView: View {
                 request
                     .navigationDestination(for: RequestRoute.self) { route in
                         switch route {
-                        case .details: RequestDetailsView()
-                        case .review:
-                            RequestReviewView {
-                                if let id = model.queueRequest() { path = [.receipt(id)] }
-                            }
                         case .receipt(let id): RequestStatusView(id: id)
                         }
                     }
             }
-            .tabItem { Label("Request", systemImage: "cross.case") }.tag(0)
+            .tabItem { Label("Report", systemImage: "cross.case") }.tag(0)
             NavigationStack { RequestHistoryView() }
                 .tabItem { Label("My requests", systemImage: "tray") }.tag(1)
+            NavigationStack { TemocView() }
+                .tabItem { Label("Temoc", systemImage: "bubble.left.and.bubble.right") }.tag(3)
             NavigationStack { SetupView() }
                 .tabItem { Label("Setup", systemImage: "gearshape") }.tag(2)
         }
@@ -40,146 +41,277 @@ struct ContentView: View {
         .alert("Could not complete action", isPresented: Binding(get: { model.errorMessage != nil }, set: { if !$0 { model.errorMessage = nil } })) {
             Button("OK", role: .cancel) { model.errorMessage = nil }
         } message: { Text(model.errorMessage ?? "") }
+        .onAppear { updateLocationActivity() }
+        .onChange(of: tab) { _, _ in updateLocationActivity() }
+        .onChange(of: path) { _, newPath in
+            if newPath.isEmpty { submitting = false }
+            updateLocationActivity()
+        }
+        .onChange(of: scenePhase) { _, _ in updateLocationActivity() }
+        .onChange(of: showingDevices) { _, _ in updateLocationActivity() }
+        .onDisappear { model.location.setReportActive(false) }
     }
 
     private var request: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                Text(campusTitle).font(.subheadline).foregroundStyle(.secondary)
-                VStack(alignment: .leading, spacing: 12) {
-                    Text("What do you need?").font(.title2.bold()).accessibilityAddTraits(.isHeader)
-                    ForEach(EmergencyCategory.allCases) { category in
-                        let selected = model.draft.category == category
-                        Button { model.updateDraft { $0.category = category } } label: {
-                            HStack(spacing: 16) {
-                                Image(systemName: category.symbol).font(.title2).frame(width: 30).accessibilityHidden(true)
-                                Text(category.title).font(.body.weight(selected ? .semibold : .regular))
-                                Spacer(minLength: 8)
-                                Image(systemName: selected ? "checkmark" : "chevron.right")
-                                    .font(.body.weight(.semibold)).foregroundStyle(selected ? rescueMagenta : Color.secondary)
-                                    .accessibilityHidden(true)
-                            }
-                            .foregroundStyle(.primary).padding(16).frame(maxWidth: .infinity, minHeight: 64)
-                            .background(selected ? rescueMagenta.opacity(0.10) : Color(uiColor: .systemBackground), in: RoundedRectangle(cornerRadius: 12))
-                            .overlay { RoundedRectangle(cornerRadius: 12).strokeBorder(selected ? Color.clear : Color(uiColor: .separator).opacity(0.6)) }
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(selected ? [.isSelected] : [])
-                    }
+            VStack(alignment: .leading, spacing: 16) {
+                transponderButton
+                paired(peopleCard, priorityCard)
+                paired(dangerCard, suppliesCard)
+                notesCard
+                concerns
+                gpsStatus
+                if model.profile == nil {
+                    Button { tab = 2 } label: {
+                        Label("Add your private phone profile in Setup to send.", systemImage: "key")
+                            .font(.subheadline).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    }.buttonStyle(.plain)
                 }
-                Button { showingDevices = true } label: {
-                    HStack(spacing: 10) {
-                        Image(systemName: "antenna.radiowaves.left.and.right").accessibilityHidden(true)
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(model.radio.ready ? "Companion connected" : "Connect your companion").font(.subheadline.weight(.semibold))
-                            Text(model.radio.ready ? "Requests travel through the radio mesh." : "You can prepare a request while offline.")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                        Spacer(minLength: 4)
-                        Image(systemName: "chevron.right").font(.caption.weight(.semibold)).accessibilityHidden(true)
-                    }.foregroundStyle(.primary).frame(minHeight: 44)
-                }.buttonStyle(.plain)
-            }.padding(.horizontal, 24).padding(.bottom, 16)
+                if !model.storageReady {
+                    Label("Protected storage is unavailable. Your report cannot be saved yet.", systemImage: "exclamationmark.circle")
+                        .font(.subheadline).foregroundStyle(Color.red)
+                }
+            }.padding(16)
         }
-        .navigationTitle("Ask for help")
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Setup") { tab = 2 } } }
+        .background(Color(uiColor: .systemGroupedBackground))
+        .scrollDismissesKeyboard(.interactively)
+        .navigationTitle("Report").navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .principal) {
+                Image("RescueMeshLogo").resizable().scaledToFit().frame(width: 148, height: 32)
+                    .accessibilityLabel("RescueMesh")
+            }
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { notesFocused = false }
+            }
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             actionArea {
-                NavigationLink(value: RequestRoute.details) { Text("Continue").primaryActionLabel() }
-                    .buttonStyle(.borderedProminent)
-                Text("RescueMesh demonstration · No emergency-service connection.").secondaryFootnote()
+                Button {
+                    guard !submitting else { return }; submitting = true
+                    notesFocused = false
+                    if let id = model.queueRequest() { path = [.receipt(id)] }
+                    else { submitting = false }
+                } label: {
+                    Label("Send request", systemImage: "paperplane.fill").primaryActionLabel()
+                }
+                .buttonStyle(.borderedProminent).controlSize(.large)
+                .disabled(submitting || model.profile == nil || !model.storageReady || model.draft.byteCount > 120)
+                if !notesFocused {
+                    Text(model.radio.ready ? "Encrypted on your phone. A hub receipt confirms delivery." : "Saved securely; sends when your transponder connects.")
+                        .secondaryFootnote()
+                    Text("Demonstration · No emergency-service connection.").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        }
+        .privacySensitive()
+    }
+
+    private var transponderButton: some View {
+        Button { notesFocused = false; showingDevices = true } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "antenna.radiowaves.left.and.right").font(.title2).foregroundStyle(rescueMagenta)
+                    .frame(width: 32).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(model.radio.ready ? "Transponder connected" : "Connect transponder").font(.headline)
+                    Text(model.radio.ready ? "Ready to carry your request." : "Prepare your report while offline.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer(minLength: 4)
+                Image(systemName: model.radio.ready ? "checkmark.circle.fill" : "chevron.right")
+                    .foregroundStyle(rescueMagenta).accessibilityHidden(true)
+            }.foregroundStyle(.primary).frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+                .padding(14)
+                .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 16))
+                .overlay { RoundedRectangle(cornerRadius: 16).strokeBorder(rescueMagenta.opacity(0.35)) }
+        }.buttonStyle(.plain)
+    }
+
+    private var peopleCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("People with you").font(.subheadline.weight(.semibold)).accessibilityAddTraits(.isHeader)
+            HStack(spacing: 2) {
+                Button { model.updateDraft { $0.people = max(1, $0.people - 1) } } label: {
+                    Image(systemName: "minus").frame(minWidth: 44, maxWidth: .infinity, minHeight: 44)
+                }
+                .disabled(model.draft.people <= 1).accessibilityLabel("Fewer people")
+                Text("\(model.draft.people)").font(.title2.weight(.semibold)).monospacedDigit()
+                    .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44)
+                    .accessibilityLabel("\(model.draft.people) \(model.draft.people == 1 ? "person" : "people"), including you")
+                Button { model.updateDraft { $0.people = min(255, $0.people + 1) } } label: {
+                    Image(systemName: "plus").frame(minWidth: 44, maxWidth: .infinity, minHeight: 44)
+                }
+                .disabled(model.draft.people >= 255).accessibilityLabel("More people")
+            }.buttonStyle(.plain)
+            Text("Including you").font(.caption).foregroundStyle(.secondary)
+        }.reportCard()
+    }
+
+    private var priorityCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Priority").font(.subheadline.weight(.semibold)).accessibilityAddTraits(.isHeader)
+            HStack(spacing: 2) {
+                ForEach([ReportedSeverity.assistance, .serious, .urgent]) { severity in
+                    let selected = model.draft.severity == severity
+                    Button { model.updateDraft { $0.severity = severity } } label: {
+                        Text(priorityMark(severity)).font(.title3.weight(.bold))
+                            .frame(minWidth: 44, maxWidth: .infinity, minHeight: 44)
+                            .foregroundStyle(selected ? rescueMagenta : Color.primary)
+                            .background(selected ? rescueMagenta.opacity(0.10) : Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
+                            .overlay { RoundedRectangle(cornerRadius: 10).strokeBorder(selected ? rescueMagenta : Color.clear) }
+                    }
+                    .buttonStyle(.plain).accessibilityLabel(severity.title)
+                    .accessibilityHint("Priority you report")
+                    .accessibilityAddTraits(selected ? [.isSelected] : [])
+                }
+            }
+            Text(model.draft.severity.title).font(.caption.weight(.medium)).foregroundStyle(.secondary)
+        }.reportCard()
+    }
+
+    private var dangerCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Type of danger").font(.subheadline.weight(.semibold)).accessibilityAddTraits(.isHeader)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(minimum: 44), spacing: 2), count: 3), spacing: 4) {
+                ForEach([EmergencyCategory.medical, .fire, .flood, .earthquake, .rescue, .safety]) { category in
+                    let selected = model.draft.category == category
+                    Button { model.updateDraft { $0.category = category } } label: {
+                        Image(systemName: category.symbol).font(.title3)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .foregroundStyle(selected ? rescueMagenta : Color.primary)
+                            .background(selected ? rescueMagenta.opacity(0.10) : Color(uiColor: .tertiarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 10))
+                            .overlay { RoundedRectangle(cornerRadius: 10).strokeBorder(selected ? rescueMagenta : Color.clear) }
+                    }
+                    .buttonStyle(.plain).accessibilityLabel(category.title)
+                    .accessibilityAddTraits(selected ? [.isSelected] : [])
+                }
+            }
+            Menu {
+                ForEach(EmergencyCategory.allCases) { category in
+                    Button { model.updateDraft { $0.category = category } } label: {
+                        Label(category.title, systemImage: category.symbol)
+                    }
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Text(model.draft.category.title).font(.subheadline.weight(.medium))
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.down").font(.caption.weight(.semibold)).accessibilityHidden(true)
+                }.frame(maxWidth: .infinity, minHeight: 44)
+            }
+            .accessibilityLabel("Type of danger").accessibilityValue(model.draft.category.title)
+        }.reportCard()
+    }
+
+    private var suppliesCard: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Supplies needed").font(.subheadline.weight(.semibold)).padding(.bottom, 6).accessibilityAddTraits(.isHeader)
+            ForEach(SupplyNeed.allCases) { supply in
+                let selected = model.draft.supplies.contains(supply)
+                Button {
+                    model.updateDraft { draft in
+                        if selected { draft.supplies.remove(supply) } else { draft.supplies.insert(supply) }
+                    }
+                } label: {
+                    HStack(spacing: 7) {
+                        Image(systemName: supply.symbol).frame(width: 18).accessibilityHidden(true)
+                        Text(supply.title).font(.subheadline)
+                        Spacer(minLength: 0)
+                        Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(selected ? rescueMagenta : Color.secondary).accessibilityHidden(true)
+                    }
+                    .foregroundStyle(.primary).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain).accessibilityLabel(supply.title)
+                .accessibilityValue(selected ? "Selected" : "Not selected")
+                .accessibilityHint("Select all supplies you need")
+                .accessibilityAddTraits(selected ? [.isSelected] : [])
+            }
+        }.reportCard()
+    }
+
+    private var notesCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Additional notes").font(.subheadline.weight(.semibold)).accessibilityAddTraits(.isHeader)
+            TextField("Add details, a building or nearby landmark…", text: draftBinding(\.note), axis: .vertical)
+                .lineLimit(3...6).font(.body).focused($notesFocused)
+                .accessibilityLabel("Additional notes and landmark")
+            noteLimit
+        }.reportCard()
+    }
+
+    @ViewBuilder private var noteLimit: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(model.draft.byteCount > 120 ? "Please shorten your notes" : "A landmark helps rescuers find you")
+                Text("\(model.draft.byteCount)/120 bytes").monospacedDigit()
+            }.font(.caption).foregroundStyle(model.draft.byteCount > 120 ? Color.red : Color.secondary)
+        } else {
+            HStack(alignment: .firstTextBaseline) {
+                Text(model.draft.byteCount > 120 ? "Please shorten your notes" : "A landmark helps rescuers find you")
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 8)
+                Text("\(model.draft.byteCount)/120 bytes").monospacedDigit().fixedSize()
+            }.font(.caption).foregroundStyle(model.draft.byteCount > 120 ? Color.red : Color.secondary)
+        }
+    }
+
+    private var concerns: some View {
+        DisclosureGroup("Additional concerns") {
+            VStack(spacing: 0) {
+                Toggle("Breathing concern", isOn: draftBinding(\.breathingConcern)).frame(minHeight: 44)
+                Toggle("Trapped", isOn: draftBinding(\.trapped)).frame(minHeight: 44)
+                Toggle("Severe bleeding", isOn: draftBinding(\.severeBleeding)).frame(minHeight: 44)
+            }.font(.subheadline).padding(.top, 8)
+        }.font(.subheadline).frame(minHeight: 44).padding(12)
+            .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+    }
+
+    private var gpsStatus: some View {
+        TimelineView(.periodic(from: .now, by: 10)) { context in
+            let available = model.location.currentFix(at: context.date)
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: available == nil ? "location" : "location.fill")
+                    .font(.title3).foregroundStyle(available == nil ? Color.secondary : rescueMagenta)
+                    .frame(width: 24).accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(available != nil ? "GPS data ready" : (model.location.requesting ? "Finding GPS…" : "GPS unavailable"))
+                        .font(.subheadline.weight(.semibold))
+                    if let available {
+                        Text("About \(Int(available.accuracy.rounded(.up))) m accuracy · attaches automatically")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        Text(model.location.message).font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+            }.frame(maxWidth: .infinity, alignment: .leading).padding(.vertical, 4)
+        }
+    }
+
+    @ViewBuilder private func paired<Left: View, Right: View>(_ left: Left, _ right: Right) -> some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 12) { left; right }
+        } else {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .top, spacing: 12) {
+                    left.frame(minWidth: 160)
+                    right.frame(minWidth: 160)
+                }
+                VStack(alignment: .leading, spacing: 12) { left; right }
             }
         }
     }
-}
 
-private struct RequestDetailsView: View {
-    @EnvironmentObject private var model: AppModel
-
-    var body: some View {
-        Form {
-            Section {
-                Label(model.draft.category.title, systemImage: model.draft.category.symbol).font(.headline)
-                Picker("Priority you report", selection: draftBinding(\.severity)) {
-                    ForEach(ReportedSeverity.allCases) { Text($0.title).tag($0) }
-                }
-                Stepper("People: \(model.draft.people)", value: draftBinding(\.people), in: 1...255)
-                DisclosureGroup("Additional concerns") {
-                    Toggle("Breathing concern", isOn: draftBinding(\.breathingConcern))
-                    Toggle("Trapped", isOn: draftBinding(\.trapped))
-                    Toggle("Severe bleeding", isOn: draftBinding(\.severeBleeding))
-                }
-            } header: { Text("Your situation") } footer: { Text("Choose the priority that describes your situation. These details are reported by you.") }
-            Section {
-                TextField("What do you need, and where can we find you?", text: draftBinding(\.note), axis: .vertical)
-                    .lineLimit(4...8).accessibilityLabel("Request details and landmark")
-                HStack {
-                    Text(model.draft.byteCount > 120 ? "Please shorten your message" : "Keep your message brief")
-                    Spacer()
-                    Text("\(model.draft.byteCount)/120").monospacedDigit()
-                }.font(.caption).foregroundStyle(model.draft.byteCount > 120 ? Color.red : Color.secondary)
-            } header: { Text("Details and landmark") } footer: { Text("Add a building, entrance or nearby landmark. Radio messages allow 120 UTF-8 bytes; some characters use more than one.") }
-            Section {
-                TimelineView(.periodic(from: .now, by: 10)) { context in
-                    if let fix = model.location.fix, fix.isUsable(at: context.date) {
-                        Label("Current location attached", systemImage: "location.fill")
-                        Text("Captured \(fix.capturedAt.formatted(date: .omitted, time: .shortened)) · About \(Int(fix.accuracy.rounded(.up))) m accuracy")
-                            .font(.caption).foregroundStyle(.secondary)
-                    } else { Text(model.location.fix == nil ? model.location.message : "Location expired. Refresh it to attach GPS.").font(.subheadline).foregroundStyle(.secondary) }
-                }
-                Button(model.location.requesting ? "Finding location…" : "Use current location") { model.location.request() }
-                    .disabled(model.location.requesting).frame(minHeight: 44)
-                if model.location.fix != nil { Button("Remove GPS location", role: .destructive) { model.location.clear() }.frame(minHeight: 44) }
-            } header: { Text("GPS location · optional") } footer: { Text("Only a location captured in the last two minutes is sent. A landmark in your message helps when GPS is unavailable.") }
-        }
-        .scrollDismissesKeyboard(.interactively)
-        .navigationTitle("A few details").navigationBarTitleDisplayMode(.inline)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            actionArea {
-                NavigationLink(value: RequestRoute.review) { Text("Review request").primaryActionLabel() }
-                    .buttonStyle(.borderedProminent).disabled(model.draft.byteCount > 120)
-            }
-        }
+    private func priorityMark(_ severity: ReportedSeverity) -> String {
+        switch severity { case .assistance: return "!"; case .serious: return "!!"; case .urgent: return "!!!" }
     }
     private func draftBinding<T>(_ keyPath: WritableKeyPath<RequestDraft, T>) -> Binding<T> {
         Binding(get: { model.draft[keyPath: keyPath] }, set: { value in model.updateDraft { $0[keyPath: keyPath] = value } })
     }
-}
-
-private struct RequestReviewView: View {
-    @EnvironmentObject private var model: AppModel
-    @Environment(\.dismiss) private var dismiss
-    let send: () -> Void
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                TimelineView(.periodic(from: .now, by: 10)) { context in
-                    RequestSummary(draft: model.draft, location: model.location.fix.flatMap { $0.isUsable(at: context.date) ? $0 : nil })
-                }
-                Text(model.radio.ready ? "Your companion is ready. We’ll wait for a receipt from the hub." : "Your request will be saved on this phone. Connect your companion to send it.")
-                    .font(.subheadline).foregroundStyle(.secondary)
-                if model.profile == nil {
-                    Label("Import your phone’s private profile in Setup before sending.", systemImage: "key")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                }
-                if !model.storageReady {
-                    Label("Protected storage is unavailable. Your request cannot be saved yet.", systemImage: "exclamationmark.circle")
-                        .font(.subheadline).foregroundStyle(Color.red)
-                }
-            }.padding(24)
-        }
-        .navigationTitle("Your request")
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Edit") { dismiss() } } }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            actionArea {
-                Button(action: send) { Text(model.radio.ready ? "Send request" : "Save request to send").primaryActionLabel() }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(model.profile == nil || !model.storageReady || model.draft.byteCount > 120)
-                Text("Your request is saved securely on your phone.").secondaryFootnote()
-            }
-        }
-        .privacySensitive()
+    private func updateLocationActivity() {
+        model.location.setReportActive(tab == 0 && path.isEmpty && !showingDevices && scenePhase == .active)
     }
 }
 
@@ -210,6 +342,14 @@ private struct RequestSummary: View {
                     if draft.severeBleeding { Label("Severe bleeding", systemImage: "exclamationmark.circle") }
                 }.font(.subheadline)
             }
+            if !draft.supplies.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Supplies needed").font(.subheadline.weight(.semibold))
+                    ForEach(SupplyNeed.allCases.filter { draft.supplies.contains($0) }) { supply in
+                        Label(supply.title, systemImage: supply.symbol).font(.subheadline)
+                    }
+                }
+            }
             Divider()
             Text(draft.note.isEmpty ? "No additional details." : draft.note).font(.body).textSelection(.enabled)
         }
@@ -221,7 +361,7 @@ private struct RequestHistoryView: View {
     var body: some View {
         List {
             if model.outbox.isEmpty {
-                ContentUnavailableView("No requests yet", systemImage: "tray", description: Text("Prepare a request in the Request tab. Your history stays on this phone."))
+                ContentUnavailableView("No requests yet", systemImage: "tray", description: Text("Prepare a request in the Report tab. Your history stays on this phone."))
             }
             ForEach(model.outbox) { item in
                 NavigationLink { RequestStatusView(id: item.id) } label: {
@@ -382,9 +522,9 @@ private struct SetupView: View {
                     if let result = model.demoResult { Text(result).font(.subheadline).textSelection(.enabled) }
                     Text("Uses synthetic data only. This does not send a request or change its delivery status.").font(.caption).foregroundStyle(.secondary)
                 }
-                Button("Clear local history and profile", role: .destructive) { clearing = true }.frame(minHeight: 44)
+                Button("Clear report history and profile", role: .destructive) { clearing = true }.frame(minHeight: 44)
                 if !model.lastAction.isEmpty { Text(model.lastAction).font(.caption).foregroundStyle(.secondary) }
-            } header: { Text("Local data") } footer: { Text("Drafts and history are encrypted on this phone and excluded from app backups. Clearing this phone does not delete reports already received by a hub.") }
+            } header: { Text("Report data") } footer: { Text("Report drafts and history are encrypted and excluded from backups. Clearing them does not delete hub reports or Temoc chats. Manage chats in Temoc’s history.") }
         }
         .navigationTitle("Setup").privacySensitive()
         .sheet(isPresented: $showingDevices) { DevicePicker().environmentObject(model) }
@@ -410,6 +550,10 @@ private func actionArea<Content: View>(@ViewBuilder content: () -> Content) -> s
 }
 
 private extension View {
+    func reportCard() -> some View {
+        padding(12).frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(uiColor: .secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 14))
+    }
     func primaryActionLabel() -> some View { font(.headline).frame(maxWidth: .infinity, minHeight: 38) }
     func secondaryFootnote() -> some View { font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true) }
 }

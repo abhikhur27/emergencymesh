@@ -8,7 +8,7 @@
 <body>
   <a class="skip" href="#content">Skip to current view</a>
   <header class="app-header">
-    <a class="wordmark" href="#requests">RescueMesh</a><span class="hub-context" id="hub-context">ECSW · UT Dallas</span>
+    <a class="wordmark" href="#requests"><img src="/assets/rescuemesh-wordmark.png" alt="RescueMesh" width="146" height="28"></a><span class="hub-context" id="hub-context">ECSW · UT Dallas</span>
     <nav id="navigation" aria-label="Hub views" hidden>
       <button type="button" data-view="requests" aria-current="page">Local requests</button><button type="button" data-view="handoffs">Regional handoffs</button><button type="button" data-view="reception">Reception study</button><button type="button" data-view="settings">Settings</button>
     </nav>
@@ -26,6 +26,7 @@
   </main>
   <div id="workspace" hidden>
     <section class="connection-strip" aria-label="Current intake"><div class="intake-context"><span id="link">Checking radio connection</span><span id="region-context">UT Dallas · ECSW</span><span id="connection-note"></span></div><p class="exercise-note"><strong>Exercise</strong> No emergency services are contacted</p><button id="simulate" type="button" class="text-action" hidden>Send test report</button></section>
+    <section id="operations-overview" class="operations-overview" aria-label="Agents and radio intake"></section>
     <main id="content" tabindex="-1">
       <section id="requests-view" class="view" aria-label="Local requests">
         <div class="local-desk"><div class="place-work">

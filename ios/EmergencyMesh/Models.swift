@@ -21,10 +21,10 @@ struct ProvisioningProfile: Codable, Equatable {
 }
 
 enum EmergencyCategory: UInt8, Codable, CaseIterable, Identifiable, Hashable {
-    case medical = 1, fire, rescue, safety, supplies
+    case medical = 1, fire = 2, rescue = 3, safety = 4, supplies = 5, flood = 6, earthquake = 7, other = 8
     var id: UInt8 { rawValue }
-    var title: String { switch self { case .medical: return "Medical"; case .fire: return "Fire"; case .rescue: return "Rescue"; case .safety: return "Safety"; case .supplies: return "Supplies" } }
-    var symbol: String { switch self { case .medical: return "cross.case"; case .fire: return "flame"; case .rescue: return "lifepreserver"; case .safety: return "shield"; case .supplies: return "shippingbox" } }
+    var title: String { switch self { case .medical: return "Medical"; case .fire: return "Fire"; case .rescue: return "Rescue"; case .safety: return "Safety"; case .supplies: return "Supplies"; case .flood: return "Flood"; case .earthquake: return "Earthquake"; case .other: return "Other" } }
+    var symbol: String { switch self { case .medical: return "cross.case"; case .fire: return "flame"; case .rescue: return "lifepreserver"; case .safety: return "shield"; case .supplies: return "shippingbox"; case .flood: return "water.waves"; case .earthquake: return "waveform.path"; case .other: return "exclamationmark.triangle" } }
 }
 
 enum ReportedSeverity: UInt8, Codable, CaseIterable, Identifiable, Hashable {
@@ -40,8 +40,38 @@ struct RequestDraft: Codable, Equatable {
     var breathingConcern = false
     var trapped = false
     var severeBleeding = false
+    var supplies: Set<SupplyNeed> = []
     var note = ""
     var byteCount: Int { note.utf8.count }
+
+    init(category: EmergencyCategory = .medical, severity: ReportedSeverity = .urgent, people: Int = 1,
+         breathingConcern: Bool = false, trapped: Bool = false, severeBleeding: Bool = false,
+         supplies: Set<SupplyNeed> = [], note: String = "") {
+        self.category = category; self.severity = severity; self.people = people
+        self.breathingConcern = breathingConcern; self.trapped = trapped; self.severeBleeding = severeBleeding
+        self.supplies = supplies; self.note = note
+    }
+
+    private enum CodingKeys: String, CodingKey { case category, severity, people, breathingConcern, trapped, severeBleeding, supplies, note }
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        category = try values.decode(EmergencyCategory.self, forKey: .category)
+        severity = try values.decode(ReportedSeverity.self, forKey: .severity)
+        people = try values.decode(Int.self, forKey: .people)
+        breathingConcern = try values.decode(Bool.self, forKey: .breathingConcern)
+        trapped = try values.decode(Bool.self, forKey: .trapped)
+        severeBleeding = try values.decode(Bool.self, forKey: .severeBleeding)
+        supplies = try values.decodeIfPresent(Set<SupplyNeed>.self, forKey: .supplies) ?? []
+        note = try values.decode(String.self, forKey: .note)
+    }
+}
+
+// The upper four bits of the existing v1 request flags byte; no extra wire bytes.
+enum SupplyNeed: UInt8, Codable, CaseIterable, Identifiable, Hashable {
+    case food = 16, water = 32, medicine = 64, power = 128
+    var id: UInt8 { rawValue }
+    var title: String { switch self { case .food: return "Food"; case .water: return "Water"; case .medicine: return "Medicine"; case .power: return "Power" } }
+    var symbol: String { switch self { case .food: return "fork.knife"; case .water: return "drop"; case .medicine: return "pills"; case .power: return "bolt" } }
 }
 
 struct LocationFix: Codable, Equatable {
@@ -53,6 +83,11 @@ struct LocationFix: Codable, Equatable {
         latitude.isFinite && longitude.isFinite && accuracy.isFinite &&
         (-90...90).contains(latitude) && (-180...180).contains(longitude) &&
         accuracy >= 0 && accuracy < 65535 && abs(date.timeIntervalSince(capturedAt)) <= 120
+    }
+    static func latestUsable(_ candidates: [LocationFix], at date: Date = Date()) -> LocationFix? {
+        candidates.filter { $0.isUsable(at: date) }.max {
+            $0.capturedAt == $1.capturedAt ? $0.accuracy > $1.accuracy : $0.capturedAt < $1.capturedAt
+        }
     }
 }
 
